@@ -10,6 +10,7 @@ import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
 import '../../../domain/entities/scan_entity.dart';
 import '../../../data/models/study_set_request.dart';
+import '../../../data/repositories/mappers.dart';
 
 part 'parent_provider.g.dart';
 
@@ -233,21 +234,36 @@ class ChooseOutputNotifier extends _$ChooseOutputNotifier {
 
         // Save flashcards to DB
         if (response.flashcards.isNotEmpty) {
-          // TODO: wire up flashcardsDao.insertAll() after build_runner generates types
-          // final cards = response.flashcards.asMap().entries.map((e) =>
-          //   FlashcardEntity(id: _uuid.v4(), studySetId: setId,
-          //     question: e.value.question, answer: e.value.answer,
-          //     difficulty: e.value.difficulty, orderIndex: e.key)).toList();
+          final cards = response.flashcards.asMap().entries.map((e) =>
+              FlashcardEntity(
+                id: _uuid.v4(),
+                studySetId: setId,
+                question: e.value.question,
+                answer: e.value.answer,
+                difficulty: e.value.difficulty,
+                orderIndex: e.key,
+              )).toList();
+          await ref
+              .read(flashcardsDaoProvider)
+              .insertAll(cards.map(Mappers.flashcardToCompanion).toList());
         }
 
         // Save quiz questions to DB
         if (response.quizQuestions.isNotEmpty) {
-          // TODO: wire up quizDao.insertAll() after build_runner generates types
-          // final questions = response.quizQuestions.asMap().entries.map((e) =>
-          //   QuizQuestionEntity(id: _uuid.v4(), studySetId: setId,
-          //     questionText: e.value.questionText, options: e.value.options,
-          //     correctIndex: e.value.correctIndex, explanation: e.value.explanation,
-          //     type: e.value.type, orderIndex: e.key)).toList();
+          final questions = response.quizQuestions.asMap().entries.map((e) =>
+              QuizQuestionEntity(
+                id: _uuid.v4(),
+                studySetId: setId,
+                questionText: e.value.questionText,
+                options: e.value.options,
+                correctIndex: e.value.correctIndex,
+                explanation: e.value.explanation,
+                type: e.value.type,
+                orderIndex: e.key,
+              )).toList();
+          await ref
+              .read(quizDaoProvider)
+              .insertAll(questions.map(Mappers.quizQuestionToCompanion).toList());
         }
 
         state = state.copyWith(isGenerating: false);

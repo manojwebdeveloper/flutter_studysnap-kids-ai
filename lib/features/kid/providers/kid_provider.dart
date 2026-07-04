@@ -9,6 +9,7 @@ import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/flashcard_entity.dart';
 import '../../../domain/entities/quiz_question_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
+import '../../../data/repositories/mappers.dart';
 
 part 'kid_provider.g.dart';
 
@@ -149,8 +150,21 @@ class FlashcardSessionNotifier extends _$FlashcardSessionNotifier {
     final child    = childRes.dataOrNull?.firstOrNull;
     if (child == null) return;
 
-    // TODO: record session to DB when ProgressTableCompanion is generated
-    // await ref.read(progressDaoProvider).recordSession(...);
+    final session = ProgressEntity(
+      id: _uuid.v4(),
+      childId: child.id,
+      studySetId: state.studySetId,
+      activityType: 'flashcard',
+      score: state.gotCount,
+      total: state.total,
+      xpEarned: state.xpEarned,
+      starsEarned: state.starsEarned,
+      completedAt: DateTime.now(),
+    );
+    await ref.read(progressDaoProvider).recordSession(
+          Mappers.progressToCompanion(session),
+        );
+
     await ref.read(childrenRepositoryProvider).addRewards(
       child.id, xp: state.xpEarned, stars: state.starsEarned,
     );
