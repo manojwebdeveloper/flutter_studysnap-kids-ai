@@ -54,6 +54,21 @@ class StudySnapApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
+      // Respect the user's system font size, but clamp the range so very
+      // large Dynamic Type (iOS) / font scale (Android) can't break the
+      // fixed kid-mode layouts. Standard accessibility practice.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: mq.textScaler.clamp(
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.3,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

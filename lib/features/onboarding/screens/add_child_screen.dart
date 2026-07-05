@@ -43,10 +43,9 @@ class _AddChildScreenState extends ConsumerState<AddChildScreen> {
     return Scaffold(
       backgroundColor: AppColours.bg,
       appBar: AppBar(backgroundColor: AppColours.bg, elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColours.blue, size: 20),
+        leading: NavBackIconButton(
           onPressed: () => context.go(AppRoutes.parentPin))),
-      body: SafeArea(child: SingleChildScrollView(
+      body: SafeArea(child: ResponsiveBody(child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Add Your Child',
@@ -90,7 +89,7 @@ class _AddChildScreenState extends ConsumerState<AddChildScreen> {
           ),
           const SizedBox(height: 32),
         ]),
-      )),
+      ))),
       bottomNavigationBar: SafeArea(child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: PrimaryButton(
@@ -117,9 +116,9 @@ class YearGroupScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColours.bg,
       appBar: AppBar(backgroundColor: AppColours.bg, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: AppColours.blue, size: 20),
+        leading: NavBackIconButton(
           onPressed: () => context.go(AppRoutes.addChild))),
-      body: SafeArea(child: Padding(
+      body: SafeArea(child: ResponsiveBody(child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Choose Learning Level',
@@ -155,7 +154,7 @@ class YearGroupScreen extends ConsumerWidget {
             },
           )),
         ]),
-      )),
+      ))),
       bottomNavigationBar: SafeArea(child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: PrimaryButton(label: 'Continue', onPressed: () => context.go(AppRoutes.subjects)),
@@ -192,9 +191,9 @@ class SubjectsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColours.bg,
       appBar: AppBar(backgroundColor: AppColours.bg, elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: AppColours.blue, size: 20),
+        leading: NavBackIconButton(
           onPressed: () => context.go(AppRoutes.yearGroup))),
-      body: SafeArea(child: Padding(
+      body: SafeArea(child: ResponsiveBody(child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Choose Subjects',
@@ -234,7 +233,7 @@ class SubjectsScreen extends ConsumerWidget {
               count == 0 ? 'No subjects selected' : '$count subject${count == 1 ? '' : 's'} selected',
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.textMuted)))),
         ]),
-      )),
+      ))),
       bottomNavigationBar: SafeArea(child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: PrimaryButton(

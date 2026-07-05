@@ -45,7 +45,7 @@ class _Body extends ConsumerWidget {
     final level    = child?.level ?? 7;
     final progress = child?.levelProgress ?? 0.68;
 
-    return Column(
+    return ResponsiveBody(child: Column(
       children: [
         // ── Header ─────────────────────────────────────────
         Padding(
@@ -146,7 +146,7 @@ class _Body extends ConsumerWidget {
           ),
         ),
       ],
-    );
+    ));
   }
 }
 

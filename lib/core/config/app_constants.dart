@@ -87,4 +87,22 @@ abstract class AppConstants {
   static const double chipRadius    = 999.0;
   static const double avatarRadius  = 18.0;
   static const double screenPadH   = 20.0;
+
+  // ── Spacing scale (4pt grid) ───────────────────────────
+  static const double space4  = 4.0;
+  static const double space8  = 8.0;
+  static const double space12 = 12.0;
+  static const double space16 = 16.0;
+  static const double space20 = 20.0;
+  static const double space24 = 24.0;
+  static const double space32 = 32.0;
+
+  // ── Responsive / large screens (iPad, foldables) ───────
+  /// Content wider than this is centred and capped so text lines and
+  /// controls stay comfortable on iPad and large Android tablets.
+  static const double contentMaxWidth = 560.0;
+
+  // ── Accessibility ──────────────────────────────────────
+  /// Minimum touch-target size (Apple HIG 44pt / Material 48dp → use 48).
+  static const double minTapTarget = 48.0;
 }

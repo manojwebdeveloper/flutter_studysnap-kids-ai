@@ -1,7 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/config/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+
+// ═══════════════════════════════════════════════════════
+// RESPONSIVE BODY — centres & caps content on iPad / tablets
+// ═══════════════════════════════════════════════════════
+
+/// Wraps page content so it never stretches uncomfortably wide on large
+/// screens (iPad, large Android tablets, foldables). On phones it is a
+/// no-op. Follows Apple HIG & Material adaptive-layout guidance.
+class ResponsiveBody extends StatelessWidget {
+  const ResponsiveBody({
+    super.key,
+    required this.child,
+    this.maxWidth = AppConstants.contentMaxWidth,
+  });
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    );
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 // PRIMARY BUTTON (Parent Mode)
@@ -26,9 +56,18 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
-    return GestureDetector(
-      onTap: enabled ? onPressed : null,
-      child: AnimatedContainer(
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      child: GestureDetector(
+        onTap: enabled
+            ? () {
+                HapticFeedback.selectionClick();
+                onPressed!();
+              }
+            : null,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: double.infinity,
         height: 54,
@@ -55,6 +94,7 @@ class PrimaryButton extends StatelessWidget {
                     )),
                   ],
                 ),
+          ),
         ),
       ),
     );
@@ -146,20 +186,31 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: margin,
-        padding: padding,
-        decoration: BoxDecoration(
-          color: AppColours.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: borderColour ?? AppColours.line,
-            width: borderWidth,
-          ),
+    final container = Container(
+      margin: margin,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColours.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: borderColour ?? AppColours.line,
+          width: borderWidth,
         ),
-        child: child,
+      ),
+      child: child,
+    );
+
+    if (onTap == null) return container;
+
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap!();
+        },
+        child: container,
       ),
     );
   }
@@ -242,16 +293,70 @@ class AppBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed ?? () => Navigator.of(context).pop(),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.arrow_back_ios, color: AppColours.blue, size: 20),
-          if (label != null)
-            Text(label!, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColours.blue)),
-        ],
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    return Semantics(
+      button: true,
+      label: label ?? 'Back',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed ?? () => Navigator.of(context).maybePop(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppConstants.minTapTarget,
+            minWidth: AppConstants.minTapTarget,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                // Platform-correct affordance: chevron on iOS, arrow on Android.
+                isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
+                color: AppColours.blue,
+                size: 20,
+              ),
+              if (label != null) ...[
+                const SizedBox(width: 2),
+                Text(
+                  label!,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColours.blue,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// NAV BACK ICON BUTTON — adaptive AppBar leading
+// ═══════════════════════════════════════════════════════
+
+/// AppBar `leading` back button that shows the platform-correct icon
+/// (iOS chevron vs Material arrow), a 48dp tap target, and a localised
+/// "Back" tooltip/semantics. Use where back navigation is custom
+/// (e.g. `context.go(...)`) rather than a plain pop.
+class NavBackIconButton extends StatelessWidget {
+  const NavBackIconButton({super.key, required this.onPressed, this.colour = AppColours.blue});
+  final VoidCallback onPressed;
+  final Color colour;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    return IconButton(
+      icon: Icon(
+        isIOS ? Icons.arrow_back_ios_new : Icons.arrow_back,
+        color: colour,
+        size: 20,
+      ),
+      tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+      onPressed: onPressed,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/config/app_constants.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -37,7 +38,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                   child: const Icon(Icons.swap_horiz, color: AppColours.textMuted, size: 22)),
               ),
             ])),
-          Expanded(child: SingleChildScrollView(
+          Expanded(child: ResponsiveBody(child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // Greeting
@@ -83,7 +84,7 @@ class ParentDashboardScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 13, color: AppColours.textMuted, height: 1.55))),
               const SizedBox(height: 20),
             ]),
-          )),
+          ))),
         ]),
       ),
     );

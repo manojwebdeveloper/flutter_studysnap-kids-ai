@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          child: ResponsiveBody(child: Column(mainAxisSize: MainAxisSize.min, children: [
             // Dots
             Row(mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_pages.length, (i) => AnimatedContainer(
@@ -64,7 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               label: _page == _pages.length - 1 ? 'Get Started' : 'Next',
               onPressed: _next,
             ),
-          ]),
+          ])),
         ),
       ),
     );
@@ -80,7 +80,8 @@ class _OBPage extends StatelessWidget {
   final String body;
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) => ResponsiveBody(
+    child: SingleChildScrollView(
     padding: const EdgeInsets.symmetric(horizontal: 24),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
@@ -93,7 +94,7 @@ class _OBPage extends StatelessWidget {
           color: AppColours.textDark, letterSpacing: -.3, height: 1.25)),
       const SizedBox(height: 10),
       Text(body, style: AppTextStyles.body),
-    ]),
+    ])),
   );
 }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/widgets.dart';
 import '../providers/onboarding_provider.dart';
 
 class ParentPinScreen extends ConsumerStatefulWidget {
@@ -47,13 +48,12 @@ class _ParentPinScreenState extends ConsumerState<ParentPinScreen> {
       backgroundColor: AppColours.bg,
       appBar: AppBar(
         backgroundColor: AppColours.bg,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColours.blue, size: 20),
+        leading: NavBackIconButton(
           onPressed: () => context.go(AppRoutes.onboarding),
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: ResponsiveBody(child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 28),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const SizedBox(height: 8),
@@ -109,7 +109,7 @@ class _ParentPinScreenState extends ConsumerState<ParentPinScreen> {
               ],
             )),
           ]),
-        ),
+        )),
       ),
     );
   }
