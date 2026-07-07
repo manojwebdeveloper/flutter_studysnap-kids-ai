@@ -24,7 +24,14 @@ class SelectedChildNotifier extends _$SelectedChildNotifier {
   Future<ChildEntity?> build() async {
     final prefs    = await SharedPreferences.getInstance();
     final childId  = prefs.getString(AppConstants.keySelectedChildId);
-    if (childId == null) return null;
+    // Guard: reject null, empty, or obviously-wrong values (e.g. a route
+    // string or a debug log line accidentally stored instead of a UUID).
+    if (childId == null ||
+        childId.isEmpty ||
+        childId.startsWith('/') ||
+        childId.startsWith('[')) {
+      return null;
+    }
     final result   = await ref.watch(childrenRepositoryProvider).getById(childId);
     return result.dataOrNull;
   }

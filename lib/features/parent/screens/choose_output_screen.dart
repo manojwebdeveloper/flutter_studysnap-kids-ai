@@ -115,13 +115,13 @@ class ChooseOutputScreen extends ConsumerWidget {
           child: PrimaryButton(
             label: '✨ Generate Study Set',
             isLoading: state.isGenerating,
-            onPressed: state.selectedOutputs.isNotEmpty ? () async {
+            onPressed: state.isGenerating ? null : () async {
               final ok = await notifier.generate(
                 ocrState.extractedText, ocrState.subject,
                 child?.yearGroup ?? 'Year 4',
               );
               if (ok && context.mounted) context.go(AppRoutes.studySetReady);
-            } : null,
+            },
           )),
       ])),
     );

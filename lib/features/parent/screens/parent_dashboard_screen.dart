@@ -107,10 +107,15 @@ class _KidsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Filter out any corrupted entries (empty or debug-string nicknames)
+    // before rendering so bad data never reaches the UI.
+    final validChildren = children
+        .where((c) => c.nickname.isNotEmpty && !c.nickname.startsWith('['))
+        .toList();
     return SizedBox(height: 88, child: ListView(
       scrollDirection: Axis.horizontal,
       children: [
-        ...children.map((c) => _KidChip(child: c, ref: ref)),
+        ...validChildren.map((c) => _KidChip(child: c, ref: ref)),
         _AddKidChip(),
       ],
     ));
@@ -140,7 +145,8 @@ class _KidChip extends StatelessWidget {
           const SizedBox(height: 6),
           SizedBox(
             width: 64,
-            child: Text(child.nickname,
+            child: Text(
+              child.nickname.isEmpty || child.nickname.startsWith('[') ? '...' : child.nickname,
               maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.textDark)),
           ),

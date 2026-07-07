@@ -67,19 +67,18 @@ class _AddChildScreenState extends ConsumerState<AddChildScreen> {
           ),
 
           const SectionLabel('PICK AN AVATAR'),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4, crossAxisSpacing: 10, mainAxisSpacing: 10),
-            itemCount: AppConstants.avatarEmojis.length,
-            itemBuilder: (_, i) {
-              final emoji = AppConstants.avatarEmojis[i];
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: AppConstants.avatarEmojis.map((emoji) {
               final selected = state.selectedAvatar == emoji;
+              final cell = (MediaQuery.of(context).size.width - 48 - 30) / 4;
               return GestureDetector(
                 onTap: () => notifier.setAvatar(emoji),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
+                  width: cell,
+                  height: cell,
                   decoration: BoxDecoration(
                     color: selected ? AppColours.blueLight : AppColours.subtle,
                     borderRadius: BorderRadius.circular(18),
@@ -90,7 +89,7 @@ class _AddChildScreenState extends ConsumerState<AddChildScreen> {
                   child: Center(child: Text(emoji, style: const TextStyle(fontSize: 28))),
                 ),
               );
-            },
+            }).toList(),
           ),
           const SizedBox(height: 32),
         ]),
