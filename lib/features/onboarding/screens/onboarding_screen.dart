@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: ResponsiveBody(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
             // Dots
             Row(mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_pages.length, (i) => AnimatedContainer(
@@ -64,7 +64,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               label: _page == _pages.length - 1 ? 'Get Started' : 'Next',
               onPressed: _next,
             ),
-          ])),
+          ]),
         ),
       ),
     );
