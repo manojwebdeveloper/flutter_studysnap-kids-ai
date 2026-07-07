@@ -138,7 +138,12 @@ class _KidChip extends StatelessWidget {
             ),
             child: Center(child: Text(child.avatar, style: const TextStyle(fontSize: 26)))),
           const SizedBox(height: 6),
-          Text(child.nickname, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.textDark)),
+          SizedBox(
+            width: 64,
+            child: Text(child.nickname,
+              maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.textDark)),
+          ),
         ])),
     );
   }

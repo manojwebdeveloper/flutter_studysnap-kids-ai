@@ -60,11 +60,18 @@ class ScanLibraryScreen extends ConsumerWidget {
                       child: Row(children: [
                         Text(c.avatar, style: const TextStyle(fontSize: 18)),
                         const SizedBox(width: 8),
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(c.nickname, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
-                            color: sel ? AppColours.blue : AppColours.textDark)),
-                          Text(c.yearGroup, style: const TextStyle(fontSize: 11, color: AppColours.textMuted)),
-                        ]),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 120),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(c.nickname,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800,
+                                color: sel ? AppColours.blue : AppColours.textDark)),
+                            Text(c.yearGroup,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, color: AppColours.textMuted)),
+                          ]),
+                        ),
                       ])),
                   );
                 }).toList())),

@@ -57,8 +57,13 @@ class _AddChildScreenState extends ConsumerState<AddChildScreen> {
           const SectionLabel('NICKNAME'),
           TextField(
             controller: _ctrl,
+            maxLength: 20,
+            textCapitalization: TextCapitalization.words,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColours.textDark),
-            decoration: const InputDecoration(hintText: 'e.g. Aarav, Mia, Buddy'),
+            decoration: const InputDecoration(
+              hintText: 'e.g. Aarav, Mia, Buddy',
+              counterText: '', // hide the character counter
+            ),
           ),
 
           const SectionLabel('PICK AN AVATAR'),
