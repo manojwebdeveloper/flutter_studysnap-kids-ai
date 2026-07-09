@@ -87,6 +87,9 @@ dev_dependencies:
   json_serializable: ^6.8.0
   drift_dev: ^2.18.0
 
+  # App icon generation (iOS + Android from one PNG)
+  flutter_launcher_icons: ^0.14.1
+
 flutter:
   uses-material-design: true
 
@@ -108,3 +111,14 @@ flutter:
           weight: 800
         - asset: assets/fonts/Nunito-Black.ttf
           weight: 900
+
+# ── App icon generation ───────────────────────────────────
+# 1. Drop a 1024x1024 PNG at assets/icon/app_icon.png
+# 2. Run:  dart run flutter_launcher_icons
+# This generates all iOS + Android launcher icons from that one file.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
