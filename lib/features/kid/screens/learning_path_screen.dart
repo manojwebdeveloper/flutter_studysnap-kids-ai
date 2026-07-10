@@ -176,6 +176,34 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('EXPLORE ACTIVITIES',
+                              style: GoogleFonts.nunito(
+                                  fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidMuted, letterSpacing: 0.8)),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _activityCard(context, '✏️', 'Spell It', AppColours.kidYellow, AppRoutes.typeAnswer),
+                              const SizedBox(width: 10),
+                              _activityCard(context, '📝', 'Writing', AppColours.kidPurple, AppRoutes.writingStudio),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _activityCard(context, '🔊', 'Listen & Pick', AppColours.kidGreen, AppRoutes.phonicsListen),
+                              const SizedBox(width: 10),
+                              _activityCard(context, '🎤', 'Speak Up', AppColours.kidPink, AppRoutes.speakAloud),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -185,6 +213,36 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       ),
     );
   }
+
+  Widget _activityCard(BuildContext context, String emoji, String label, Color colour, String route) => Expanded(
+        child: GestureDetector(
+          onTap: () => context.go(route),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: colour.withOpacity(0.33), width: 2),
+              boxShadow: [BoxShadow(color: colour.withOpacity(0.18), offset: const Offset(0, 3))],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(color: colour.withOpacity(0.14), borderRadius: BorderRadius.circular(11)),
+                  child: Center(child: Text(emoji, style: const TextStyle(fontSize: 19))),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(label,
+                      style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 class _NodeWidget extends StatefulWidget {

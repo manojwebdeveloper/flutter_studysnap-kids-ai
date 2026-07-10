@@ -33,6 +33,10 @@ import '../../features/kid/screens/flashcard_study_screen.dart';
 import '../../features/kid/screens/quiz_screen.dart';
 import '../../features/kid/screens/quiz_result_screen.dart';
 import '../../features/kid/screens/rewards_screen.dart';
+import '../../features/kid/screens/type_answer_screen.dart';
+import '../../features/kid/screens/writing_studio_screen.dart';
+import '../../features/kid/screens/phonics_listen_screen.dart';
+import '../../features/kid/screens/speak_aloud_screen.dart';
 import '../config/app_constants.dart';
 
 part 'app_router.g.dart';
@@ -66,6 +70,10 @@ abstract class AppRoutes {
   static const quiz          = '/kid/quiz';
   static const quizResult    = '/kid/quiz/result';
   static const rewards       = '/kid/rewards';
+  static const typeAnswer    = '/kid/type-answer';
+  static const writingStudio = '/kid/writing-studio';
+  static const phonicsListen = '/kid/phonics-listen';
+  static const speakAloud    = '/kid/speak-aloud';
 }
 
 @riverpod
@@ -119,6 +127,10 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(path: AppRoutes.flashcards,   builder: (_, __) => const FlashcardStudyScreen()),
       GoRoute(path: AppRoutes.quiz,         builder: (_, __) => const QuizScreen()),
       GoRoute(path: AppRoutes.quizResult,   builder: (_, __) => const QuizResultScreen()),
+      GoRoute(path: AppRoutes.typeAnswer,   builder: (_, __) => const TypeAnswerScreen()),
+      GoRoute(path: AppRoutes.writingStudio,builder: (_, __) => const WritingStudioScreen()),
+      GoRoute(path: AppRoutes.phonicsListen,builder: (_, __) => const PhonicsListenScreen()),
+      GoRoute(path: AppRoutes.speakAloud,   builder: (_, __) => const SpeakAloudScreen()),
     ],
 
     // Custom slide transition on every route

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/config/app_constants.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
@@ -26,7 +27,9 @@ class ParentDashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColours.background,
-      body: SafeArea(
+      body: _maybeTablet(
+        context,
+        SafeArea(
         child: Column(
           children: [
             // ── Title row ──────────────────────────────────
@@ -119,7 +122,17 @@ class ParentDashboardScreen extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+      )),
+    );
+  }
+
+  Widget _maybeTablet(BuildContext context, Widget content) {
+    if (!isTablet(context)) return content;
+    return Row(
+      children: [
+        const _ParentSidebar(),
+        Expanded(child: content),
+      ],
     );
   }
 
@@ -128,6 +141,78 @@ class ParentDashboardScreen extends ConsumerWidget {
     if (h < 12) return 'Good morning 👋';
     if (h < 17) return 'Good afternoon 👋';
     return 'Good evening 👋';
+  }
+}
+
+// ── Tablet sidebar (parent) ───────────────────────────────
+
+class _ParentSidebar extends StatelessWidget {
+  const _ParentSidebar();
+
+  static const _items = [
+    (Icons.home_outlined, 'Dashboard', AppRoutes.parent),
+    (Icons.document_scanner_outlined, 'Scan', AppRoutes.scan),
+    (Icons.folder_outlined, 'Study Sets', AppRoutes.studySets),
+    (Icons.bar_chart_outlined, 'Progress', AppRoutes.progress),
+    (Icons.settings_outlined, 'Settings', AppRoutes.settings),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final current = GoRouterState.of(context).matchedLocation;
+    return Container(
+      width: 260,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: AppColours.blue.withOpacity(0.06), blurRadius: 16, offset: const Offset(4, 0))],
+      ),
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Row(
+                children: [
+                  SizedBox(width: 54, height: 54, child: FittedBox(child: LogoMark())),
+                  SizedBox(width: 12),
+                  Text('StudySnap',
+                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: AppColours.blue, letterSpacing: -0.4)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._items.map((item) {
+              final active = current == item.$3;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: GestureDetector(
+                  onTap: () => context.go(item.$3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: active ? AppColours.blue.withOpacity(0.10) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(item.$1, size: 22, color: active ? AppColours.blue : AppColours.muted),
+                        const SizedBox(width: 12),
+                        Text(item.$2,
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: active ? AppColours.blue : AppColours.muted)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
   }
 }
 

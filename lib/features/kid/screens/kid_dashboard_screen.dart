@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../providers/kid_provider.dart';
@@ -23,14 +24,95 @@ class KidDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final childAsync = ref.watch(activeChildProvider);
+    final content = childAsync.when(
+      data: (child) => _Body(child: child),
+      loading: () => const Center(child: CircularProgressIndicator(color: AppColours.kidBlue)),
+      error: (_, __) => const Center(child: Text('Something went wrong')),
+    );
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       backgroundColor: AppColours.kidBackground,
-      body: childAsync.when(
-        data: (child) => _Body(child: child),
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColours.kidBlue)),
-        error: (_, __) => const Center(child: Text('Something went wrong')),
+      body: isTablet(context)
+          ? Row(
+              children: [
+                const _KidSidebar(),
+                Expanded(child: content),
+              ],
+            )
+          : content,
+    );
+  }
+}
+
+// ── Tablet sidebar (kid) ──────────────────────────────────
+class _KidSidebar extends StatelessWidget {
+  const _KidSidebar();
+
+  static const _items = [
+    ('🏠', 'Home', AppRoutes.kid),
+    ('🗺️', 'Learning Path', AppRoutes.learningPath),
+    ('🏆', 'Rewards', AppRoutes.rewards),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final current = GoRouterState.of(context).matchedLocation;
+    return Container(
+      width: 260,
+      color: Colors.white,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      gradient: const LinearGradient(colors: [AppColours.kidBlue, AppColours.kidPurple]),
+                    ),
+                    child: const Center(child: Text('🚀', style: TextStyle(fontSize: 22))),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('StudySnap',
+                      style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+                ],
+              ),
+            ),
+            ..._items.map((item) {
+              final active = current == item.$3;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: GestureDetector(
+                  onTap: () => context.go(item.$3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: active ? AppColours.kidBlue.withOpacity(0.12) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(item.$1, style: const TextStyle(fontSize: 20)),
+                        const SizedBox(width: 12),
+                        Text(item.$2,
+                            style: GoogleFonts.nunito(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: active ? AppColours.kidBlueDark : AppColours.kidMuted)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
