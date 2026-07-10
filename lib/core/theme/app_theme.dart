@@ -28,6 +28,12 @@ abstract class AppColours {
   static const red         = Color(0xFFEF4444);
   static const redLight    = Color(0xFFFEF2F2);
 
+  // ── Spec-named aliases (identical values) ────────────────
+  static const background  = bg;        // #F8FAFC
+  static const ink         = textDark;  // #111827
+  static const ink2        = textInk;   // #1F2937
+  static const muted       = textMuted; // #6B7280
+
   // Kid Mode
   static const kidBlue      = Color(0xFF38BDF8);
   static const kidBlueDark  = Color(0xFF0284C7);
@@ -38,6 +44,9 @@ abstract class AppColours {
   static const kidGreenDark = Color(0xFF16A34A);
   static const kidPink      = Color(0xFFFB7185);
   static const kidBg        = Color(0xFFF0F9FF);
+  static const kidBackground = kidBg;              // #F0F9FF
+  static const kidInk        = Color(0xFF1E293B);  // #1E293B
+  static const kidMuted      = Color(0xFF64748B);  // #64748B
 
   // Shadows
   static List<BoxShadow> primaryShadow(Color c) => [

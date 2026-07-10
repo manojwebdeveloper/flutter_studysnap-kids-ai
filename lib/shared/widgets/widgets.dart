@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/config/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -420,6 +421,215 @@ class ScoreProgressBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(99),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SVG ICON HELPER
+// ═══════════════════════════════════════════════════════
+
+String _svgHex(Color c) {
+  // ignore: deprecated_member_use
+  final rgb = c.value & 0xFFFFFF;
+  return '#${rgb.toRadixString(16).padLeft(6, '0')}';
+}
+
+/// Renders a single SVG path. Pass [stroke] for outline icons (round
+/// linecap/linejoin) or [fill] for solid icons. viewBox is 24×24.
+Widget appSvg(
+  String path, {
+  required double size,
+  Color? stroke,
+  Color? fill,
+  double strokeWidth = 2,
+}) {
+  final fillAttr = fill != null ? _svgHex(fill) : 'none';
+  final strokeAttr = stroke != null
+      ? 'stroke="${_svgHex(stroke)}" stroke-width="$strokeWidth" '
+          'stroke-linecap="round" stroke-linejoin="round"'
+      : '';
+  final doc =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">'
+      '<path d="$path" fill="$fillAttr" $strokeAttr/></svg>';
+  return SvgPicture.string(doc, width: size, height: size);
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGO MARK (splash)
+// ═══════════════════════════════════════════════════════
+
+class LogoMark extends StatelessWidget {
+  const LogoMark({super.key});
+
+  static const _bookPath =
+      'M3 6a2 2 0 012-2h8a4 4 0 014 4v12a3 3 0 00-3-3H5a2 2 0 01-2-2V6z';
+  static const _starPath =
+      'M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7l3-7z';
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 108,
+      height: 108,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 108,
+            height: 108,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColours.blue, AppColours.purple],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColours.blue.withOpacity(0.44),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Center(
+              child: appSvg(_bookPath, size: 52, stroke: Colors.white, strokeWidth: 2),
+            ),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColours.amber,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColours.amber.withOpacity(0.66),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(child: appSvg(_starPath, size: 18, fill: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// KID STAT BUBBLE
+// ═══════════════════════════════════════════════════════
+
+class KidStatBubble extends StatelessWidget {
+  const KidStatBubble({
+    super.key,
+    required this.emoji,
+    required this.value,
+    required this.label,
+  });
+  final String emoji, value, label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          Text(value,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(
+                  fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.nunito(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withOpacity(0.75))),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// SUBJECT PROGRESS ROW (kid)
+// ═══════════════════════════════════════════════════════
+
+class SubjectProgressRow extends StatelessWidget {
+  const SubjectProgressRow({
+    super.key,
+    required this.subject,
+    required this.emoji,
+    required this.colour,
+    required this.done,
+    required this.total,
+  });
+  final String subject, emoji;
+  final Color colour;
+  final int done, total;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = total > 0 ? (done / total).clamp(0.0, 1.0) : 0.0;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colour.withOpacity(0.22), width: 2),
+        boxShadow: [
+          BoxShadow(color: colour.withOpacity(0.18), offset: const Offset(0, 3), blurRadius: 0),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colour.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20))),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subject,
+                    style: GoogleFonts.nunito(
+                        fontSize: 15, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: colour.withOpacity(0.14),
+                    valueColor: AlwaysStoppedAnimation<Color>(colour),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Icon(Icons.chevron_right, color: colour),
+        ],
       ),
     );
   }

@@ -59,44 +59,74 @@ class _KidShellState extends ConsumerState<KidShell> {
         if (ok && context.mounted) context.go(AppRoutes.parent);
       },
       child: Scaffold(
-        backgroundColor: AppColours.kidBg,
-        body: widget.child,
-        bottomNavigationBar: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: Color(0xFFE0F2FE), width: 1)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                children: _tabs.asMap().entries.map((e) {
-                  final isOn = idx == e.key;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => context.go(_tabs[e.key].route),
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_tabs[e.key].emoji,
-                            style: TextStyle(fontSize: isOn ? 24 : 22)),
-                          const SizedBox(height: 3),
-                          Text(_tabs[e.key].label,
-                            style: GoogleFonts.nunito(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: isOn ? AppColours.kidBlue : AppColours.textMuted,
-                            )),
-                        ],
-                      ),
+        backgroundColor: AppColours.kidBackground,
+        body: Stack(
+          children: [
+            Positioned.fill(child: widget.child),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 18,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF38BDF8).withOpacity(0.18),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
-                  );
-                }).toList(),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: _tabs.asMap().entries.map((e) {
+                    final isOn = idx == e.key;
+                    final t = e.value;
+                    return Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => context.go(t.route),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isOn ? AppColours.kidBlue : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(t.emoji, style: const TextStyle(fontSize: 18)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  t.label,
+                                  style: GoogleFonts.nunito(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: isOn ? Colors.white : AppColours.kidMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

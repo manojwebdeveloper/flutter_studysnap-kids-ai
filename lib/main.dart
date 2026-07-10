@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/config/app_env.dart';
 import 'core/theme/app_theme.dart';
@@ -32,6 +33,15 @@ Future<void> main() async {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // Fresh-install guard: on the very first launch, wipe any leftover storage
+  // (e.g. data restored from a previous install) so the app opens completely
+  // clean with onboarding — no stale children or flags.
+  final prefs = await SharedPreferences.getInstance();
+  if (!prefs.containsKey('app_initialized')) {
+    await prefs.clear();
+    await prefs.setBool('app_initialized', true);
+  }
 
   log.i('StudySnap Kids AI starting — env: ${AppEnv.appEnv}');
 

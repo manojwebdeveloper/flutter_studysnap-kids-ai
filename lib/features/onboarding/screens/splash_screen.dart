@@ -25,17 +25,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           children: [
             const Spacer(),
             // Logo
-            Container(
-              width: 96, height: 96,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(color: AppColours.blue.withOpacity(.14), blurRadius: 32, offset: const Offset(0, 8)),
-                ],
-              ),
-              child: const Center(child: Text('📚', style: TextStyle(fontSize: 46))),
-            )
+            const LogoMark()
                 .animate()
                 .scale(begin: const Offset(.6, .6), duration: 500.ms, curve: Curves.elasticOut, delay: 100.ms),
 
