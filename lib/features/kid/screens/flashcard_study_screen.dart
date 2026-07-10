@@ -12,7 +12,8 @@ import '../providers/kid_provider.dart';
 
 class FlashcardStudyScreen extends ConsumerStatefulWidget {
   const FlashcardStudyScreen({super.key});
-  @override ConsumerState<FlashcardStudyScreen> createState() => _FlashcardStudyScreenState();
+  @override
+  ConsumerState<FlashcardStudyScreen> createState() => _FlashcardStudyScreenState();
 }
 
 class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
@@ -25,12 +26,15 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
   void initState() {
     super.initState();
     _flipCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
-    _flipAnim = Tween<double>(begin: 0, end: math.pi).animate(
-      CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOutCubic));
+    _flipAnim = Tween<double>(begin: 0, end: math.pi)
+        .animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOutCubic));
   }
 
   @override
-  void dispose() { _flipCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _flipCtrl.dispose();
+    super.dispose();
+  }
 
   void _flip() {
     HapticFeedback.lightImpact();
@@ -44,7 +48,6 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
 
   Future<void> _rate(bool knew) async {
     HapticFeedback.mediumImpact();
-    // Reset flip state for next card
     _flipCtrl.reset();
     setState(() => _showFront = true);
     await ref.read(flashcardSessionNotifierProvider.notifier).rate(knew);
@@ -56,140 +59,270 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
 
   @override
   Widget build(BuildContext context) {
-    final session  = ref.watch(flashcardSessionNotifierProvider);
-    final card     = session.current;
+    final session = ref.watch(flashcardSessionNotifierProvider);
+    final card = session.current;
+    final subject = session.subject.isEmpty ? 'Maths' : session.subject;
 
     return Scaffold(
-      backgroundColor: AppColours.kidBg,
-      body: SafeArea(child: Column(children: [
-        // Top bar
-        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 20, 10),
-          child: Row(children: [
-            GestureDetector(onTap: () => context.go(AppRoutes.learningPath),
-              child: const Icon(Icons.close, size: 26, color: AppColours.textDark)),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Text('MATHS · FRACTIONS', style: GoogleFonts.nunito(
-                fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidBlue, letterSpacing: .6)),
-              Text('Flashcards', style: GoogleFonts.nunito(
-                fontSize: 17, fontWeight: FontWeight.w900, color: AppColours.textDark)),
-            ])),
-            Text('${session.currentIndex + 1} / ${session.total}',
-              style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w800, color: AppColours.textMuted)),
-          ])),
-
-        // Progress bar
-        LinearProgressIndicator(
-          value: session.progress,
-          backgroundColor: const Color(0xFFE0F2FE),
-          valueColor: const AlwaysStoppedAnimation(AppColours.kidBlue),
-          minHeight: 5,
-        ),
-
-        // Card
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: GestureDetector(
-              onTap: _showFront ? _flip : null,
-              child: AnimatedBuilder(
-                animation: _flipAnim,
-                builder: (_, __) {
-                  final angle  = _flipAnim.value;
-                  final isFront = angle < math.pi / 2;
-                  return Transform(
-                    alignment: Alignment.center,
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.001)
-                      ..rotateY(angle),
-                    child: isFront
-                        ? _CardFace(isFront: true, text: card?.question ?? '', onTap: _flip)
-                        : Transform(
-                            alignment: Alignment.center,
-                            transform: Matrix4.rotationY(math.pi),
-                            child: _CardFace(isFront: false, text: card?.answer ?? '')),
-                  );
-                },
+      backgroundColor: AppColours.kidBackground,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Header ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 20, 10),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => context.go(AppRoutes.learningPath),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColours.line)),
+                      child: const Center(child: Icon(Icons.close, size: 20, color: AppColours.kidInk)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(color: AppColours.kidBlue.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
+                          child: Text(subject.toUpperCase(),
+                              style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w900, color: AppColours.kidBlueDark, letterSpacing: 0.6)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text('Flashcards', style: GoogleFonts.nunito(fontSize: 18, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: AppColours.kidYellow, borderRadius: BorderRadius.circular(999)),
+                    child: Text('${session.currentIndex + 1} / ${session.total}',
+                        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: const Color(0xFF78350F))),
+                  ),
+                ],
               ),
             ),
-          ),
+            // ── Progress bar (green→blue) ───────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Container(
+                  height: 8,
+                  color: const Color(0xFFE0F2FE),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: session.progress.clamp(0.0, 1.0),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(colors: [AppColours.kidGreen, AppColours.kidBlue]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // ── Card ────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: GestureDetector(
+                  onTap: _showFront ? _flip : null,
+                  child: AnimatedBuilder(
+                    animation: _flipAnim,
+                    builder: (_, __) {
+                      final angle = _flipAnim.value;
+                      final isFront = angle < math.pi / 2;
+                      return Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.001)
+                          ..rotateY(angle),
+                        child: isFront
+                            ? _CardFront(text: card?.question ?? '')
+                            : Transform(
+                                alignment: Alignment.center,
+                                transform: Matrix4.rotationY(math.pi),
+                                child: _CardBack(answer: card?.answer ?? ''),
+                              ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            // ── Actions ─────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: _showFront
+                  ? Kid3dButton(
+                      label: '👀 Show Answer',
+                      onPressed: _flip,
+                      colour: AppColours.kidBlue,
+                      darkColour: AppColours.kidBlueDark,
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: _RateBtn('🔄 Try Again', AppColours.kidPink, _flip)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _RateBtn('🤔 Not Sure', AppColours.kidYellow, () => _rate(false))),
+                        const SizedBox(width: 8),
+                        Expanded(child: _RateBtn('😊 Got it', AppColours.kidGreen, () => _rate(true))),
+                      ],
+                    ),
+            ),
+          ],
         ),
-
-        // Actions
-        Padding(padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: _showFront
-              ? Kid3dButton(
-                  label: '👀 Show Answer',
-                  onPressed: _flip,
-                  colour: AppColours.kidBlue,
-                  darkColour: AppColours.kidBlueDark,
-                )
-              : Row(children: [
-                  Expanded(child: _RateBtn('😕 Missed it', const Color(0xFFFEF2F2), AppColours.red, () => _rate(false))),
-                  const SizedBox(width: 10),
-                  Expanded(child: _RateBtn('😊 Got it!', AppColours.greenLight, AppColours.green, () => _rate(true))),
-                ])),
-      ])),
+      ),
     );
   }
 }
 
-class _CardFace extends StatelessWidget {
-  const _CardFace({required this.isFront, required this.text, this.onTap});
-  final bool isFront;
+class _CardFront extends StatelessWidget {
+  const _CardFront({required this.text});
   final String text;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: isFront ? AppColours.line : AppColours.kidBlue,
-        width: isFront ? 1.5 : 2.5,
-      ),
-    ),
-    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(isFront ? 'QUESTION' : 'ANSWER',
-            style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900,
-              color: isFront ? AppColours.textMuted : AppColours.kidBlue, letterSpacing: .5)),
-          Text(isFront ? 'Tap to flip' : 'Tap to flip back',
-            style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w700, color: AppColours.textMuted)),
-        ])),
-      Expanded(child: Center(child: Padding(padding: const EdgeInsets.all(28),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(isFront ? '❓' : '✅', style: const TextStyle(fontSize: 44)),
-          const SizedBox(height: 14),
-          Text(text, textAlign: TextAlign.center,
-            style: isFront
-                ? GoogleFonts.nunito(fontSize: 26, fontWeight: FontWeight.w900, color: AppColours.textDark, height: 1.3)
-                : GoogleFonts.nunito(fontSize: 17, fontWeight: FontWeight.w700, color: AppColours.textInk, height: 1.6)),
-        ])))),
-    ]),
-  );
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColours.kidBlue, width: 2.5),
+          boxShadow: [BoxShadow(color: AppColours.kidBlue.withOpacity(0.12), blurRadius: 18, offset: const Offset(0, 8))],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(color: AppColours.kidBlue.withOpacity(0.12), shape: BoxShape.circle),
+              child: const Center(child: Text('❓', style: TextStyle(fontSize: 28))),
+            ),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Text(text,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(fontSize: 32, fontWeight: FontWeight.w900, color: AppColours.kidInk, height: 1.25)),
+            ),
+            const SizedBox(height: 20),
+            Text('Tap the card to flip',
+                style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.kidMuted)),
+          ],
+        ),
+      );
+}
+
+class _CardBack extends StatelessWidget {
+  const _CardBack({required this.answer});
+  final String answer;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColours.kidGreen, width: 2.5),
+          boxShadow: [BoxShadow(color: AppColours.kidGreen.withOpacity(0.12), blurRadius: 18, offset: const Offset(0, 8))],
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _backBox(
+                bg: AppColours.kidGreen.withOpacity(0.12),
+                border: AppColours.kidGreen,
+                label: 'ANSWER',
+                labelColour: AppColours.kidGreenDark,
+                body: answer,
+                bodySize: 22,
+              ),
+              const SizedBox(height: 12),
+              _backBox(
+                bg: const Color(0xFFEDE9FE),
+                border: AppColours.kidPurple,
+                label: '💡 MEMORY TIP',
+                labelColour: AppColours.kidPurpleDark,
+                body: 'Say the answer out loud, then cover it and try again. Repeating it helps it stick!',
+                bodySize: 14,
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _backBox({
+    required Color bg,
+    required Color border,
+    required String label,
+    required Color labelColour,
+    required String body,
+    required double bodySize,
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: border.withOpacity(0.4), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900, color: labelColour, letterSpacing: 0.6)),
+            const SizedBox(height: 6),
+            Text(body,
+                style: GoogleFonts.nunito(fontSize: bodySize, fontWeight: FontWeight.w800, color: AppColours.kidInk, height: 1.4)),
+          ],
+        ),
+      );
 }
 
 class _RateBtn extends StatefulWidget {
-  const _RateBtn(this.label, this.bg, this.colour, this.onTap);
+  const _RateBtn(this.label, this.colour, this.onTap);
   final String label;
-  final Color bg, colour;
+  final Color colour;
   final VoidCallback onTap;
-  @override State<_RateBtn> createState() => _RateBtnState();
+  @override
+  State<_RateBtn> createState() => _RateBtnState();
 }
 
 class _RateBtnState extends State<_RateBtn> {
   bool _pressed = false;
-  @override Widget build(BuildContext context) => GestureDetector(
-    onTapDown: (_) => setState(() => _pressed = true),
-    onTapUp: (_) { setState(() => _pressed = false); widget.onTap(); },
-    onTapCancel: () => setState(() => _pressed = false),
-    child: AnimatedScale(scale: _pressed ? .96 : 1, duration: const Duration(milliseconds: 80),
-      child: Container(padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(color: widget.bg, borderRadius: BorderRadius.circular(16)),
-        child: Center(child: Text(widget.label, style: GoogleFonts.nunito(
-          fontSize: 15, fontWeight: FontWeight.w900, color: widget.colour))))));
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? .95 : 1,
+          duration: const Duration(milliseconds: 80),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: widget.colour, width: 2),
+            ),
+            child: Center(
+              child: Text(widget.label,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: widget.colour)),
+            ),
+          ),
+        ),
+      );
 }
