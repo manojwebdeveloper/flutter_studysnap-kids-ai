@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../domain/entities/study_set_entity.dart';
+import '../../parent/providers/insights_provider.dart';
+import '../providers/kid_provider.dart';
 
 const _lockIcon =
     'M6 10V8a6 6 0 1112 0v2M5 10h14a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9a1 1 0 011-1z';
@@ -18,30 +22,73 @@ class _PathNode {
   final int stars;
 }
 
-class LearningPathScreen extends StatefulWidget {
+class LearningPathScreen extends ConsumerStatefulWidget {
   const LearningPathScreen({super.key});
   @override
-  State<LearningPathScreen> createState() => _LearningPathScreenState();
+  ConsumerState<LearningPathScreen> createState() => _LearningPathScreenState();
 }
 
-class _LearningPathScreenState extends State<LearningPathScreen> {
+class _LearningPathScreenState extends ConsumerState<LearningPathScreen> {
   int _tab = 0;
-  static const _tabs = ['Maths', 'English', 'Science 🔒'];
-  static const _lockedTab = 2;
-
-  static const _nodes = [
-    _PathNode('+', 'Addition', NodeState.done, 3),
-    _PathNode('−', 'Subtraction', NodeState.done, 3),
-    _PathNode('×', 'Multiplication', NodeState.done, 2),
-    _PathNode('½', 'Fractions', NodeState.current, 0),
-    _PathNode('📐', 'Geometry', NodeState.locked, 0),
-    _PathNode('0.5', 'Decimals', NodeState.locked, 0),
-  ];
 
   static const _offsets = [60.0, 120.0, 60.0, 0.0, 60.0, 120.0];
 
+  static String _symbolFor(StudySetEntity s) => switch (s.subject) {
+        'Maths' => '➗',
+        'English' => '📖',
+        'Science' => '🧪',
+        'Spelling' => '✏️',
+        'Reading' => '📚',
+        _ => '📘',
+      };
+
   @override
   Widget build(BuildContext context) {
+    final sets = ref.watch(approvedSetsProvider).valueOrNull ?? const <StudySetEntity>[];
+    final progress = ref.watch(childProgressProvider).valueOrNull;
+    final streak = ref.watch(activeChildProvider).valueOrNull?.streak ?? 0;
+
+    final completedSetIds = <String>{
+      if (progress != null) for (final s in progress.sessions) s.studySetId,
+    };
+
+    // Distinct subjects (tab list) from the child's approved sets.
+    final subjects = <String>[];
+    for (final s in sets) {
+      if (!subjects.contains(s.subject)) subjects.add(s.subject);
+    }
+    final tabIndex = subjects.isEmpty ? 0 : _tab.clamp(0, subjects.length - 1);
+    final selectedSubject = subjects.isEmpty ? null : subjects[tabIndex];
+    final subjectSets = selectedSubject == null
+        ? const <StudySetEntity>[]
+        : sets.where((s) => s.subject == selectedSubject).toList();
+
+    // Build path nodes with real completion state derived from progress.
+    final nodes = <_PathNode>[];
+    var currentAssigned = false;
+    for (final s in subjectSets) {
+      final done = completedSetIds.contains(s.id);
+      final NodeState st;
+      if (done) {
+        st = NodeState.done;
+      } else if (!currentAssigned) {
+        st = NodeState.current;
+        currentAssigned = true;
+      } else {
+        st = NodeState.locked;
+      }
+      var stars = 0;
+      if (done && progress != null) {
+        final recs = progress.sessions.where((p) => p.studySetId == s.id);
+        if (recs.isNotEmpty) {
+          final best = recs.map((p) => p.percentage).reduce((a, b) => a > b ? a : b);
+          stars = (best / 100 * 3).round();
+        }
+      }
+      nodes.add(_PathNode(_symbolFor(s), s.title, st, stars));
+    }
+    final doneCount = nodes.where((n) => n.state == NodeState.done).length;
+
     return Scaffold(
       backgroundColor: AppColours.kidBackground,
       body: SafeArea(
@@ -78,104 +125,116 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(999)),
-                        child: Text('🔥 4', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
+                        child: Text('🔥 $streak', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: List.generate(_tabs.length, (i) {
-                      final locked = i == _lockedTab;
-                      final on = _tab == i;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: GestureDetector(
-                          onTap: locked ? null : () => setState(() => _tab = i),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: on
-                                  ? Colors.white
-                                  : Colors.white.withOpacity(locked ? 0.10 : 0.18),
-                              borderRadius: BorderRadius.circular(999),
+                  if (subjects.isNotEmpty)
+                    Row(
+                      children: List.generate(subjects.length, (i) {
+                        final on = tabIndex == i;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: GestureDetector(
+                            onTap: () => setState(() => _tab = i),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: on ? Colors.white : Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(subjects[i],
+                                  style: GoogleFonts.nunito(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: on ? AppColours.kidBlue : Colors.white)),
                             ),
-                            child: Text(_tabs[i],
-                                style: GoogleFonts.nunito(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: on
-                                        ? AppColours.kidBlue
-                                        : Colors.white.withOpacity(locked ? 0.5 : 1))),
                           ),
-                        ),
-                      );
-                    }),
-                  ),
+                        );
+                      }),
+                    ),
                 ],
               ),
             ),
             // Progress strip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              color: Colors.white,
-              child: Row(
-                children: [
-                  Text('Maths · Year 4', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.kidMuted)),
-                  const Spacer(),
-                  Text('3/8 done', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: AppColours.kidGreen)),
-                ],
+            if (selectedSubject != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    Text('$selectedSubject · ${subjectSets.isEmpty ? '' : subjectSets.first.yearGroup}',
+                        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.kidMuted)),
+                    const Spacer(),
+                    Text('$doneCount/${subjectSets.length} done',
+                        style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w900, color: AppColours.kidGreen)),
+                  ],
+                ),
               ),
-            ),
             // Path
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.only(top: 12, bottom: 110),
                 child: Column(
                   children: [
-                    ..._nodes.asMap().entries.map((e) {
-                      final node = e.value;
-                      final prev = e.key == 0 ? null : _nodes[e.key - 1];
-                      return Column(
-                        children: [
-                          if (e.key != 0)
-                            Container(
-                              margin: EdgeInsets.only(left: _offsets[e.key % _offsets.length]),
-                              width: 3,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: prev?.state == NodeState.done ? AppColours.kidGreen.withOpacity(0.44) : AppColours.line,
-                                borderRadius: BorderRadius.circular(2),
+                    if (subjectSets.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 30, bottom: 10),
+                        child: KidEmptyState(
+                          emoji: '🗺️',
+                          title: 'No lessons yet',
+                          message: 'Ask a grown-up to scan a worksheet to build your learning path!',
+                        ),
+                      )
+                    else ...[
+                      ...nodes.asMap().entries.map((e) {
+                        final node = e.value;
+                        final prev = e.key == 0 ? null : nodes[e.key - 1];
+                        return Column(
+                          children: [
+                            if (e.key != 0)
+                              Container(
+                                margin: EdgeInsets.only(left: _offsets[e.key % _offsets.length]),
+                                width: 3,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: prev?.state == NodeState.done ? AppColours.kidGreen.withOpacity(0.44) : AppColours.line,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            Padding(
+                              padding: EdgeInsets.only(left: _offsets[e.key % _offsets.length]),
+                              child: _NodeWidget(
+                                node: node,
+                                onTap: node.state == NodeState.current ? () => context.go(AppRoutes.flashcards) : null,
                               ),
                             ),
-                          Padding(
-                            padding: EdgeInsets.only(left: _offsets[e.key % _offsets.length]),
-                            child: _NodeWidget(
-                              node: node,
-                              onTap: node.state == NodeState.current ? () => context.go(AppRoutes.flashcards) : null,
-                            ),
+                          ],
+                        );
+                      }),
+                      if (nodes.any((n) => n.state == NodeState.locked)) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          constraints: const BoxConstraints(maxWidth: 280),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppColours.line, width: 1.5),
                           ),
-                        ],
-                      );
-                    }),
-                    const SizedBox(height: 16),
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 280),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColours.line, width: 1.5),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text('🔒', style: TextStyle(fontSize: 22)),
-                          const SizedBox(height: 6),
-                          Text('Finish Fractions to unlock the next topics!',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.kidMuted)),
-                        ],
-                      ),
-                    ),
+                          child: Column(
+                            children: [
+                              const Text('🔒', style: TextStyle(fontSize: 22)),
+                              const SizedBox(height: 6),
+                              Text('Keep going to unlock the next lessons!',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.kidMuted)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                     const SizedBox(height: 24),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../providers/parent_provider.dart';
+import '../providers/insights_provider.dart';
 import 'parent_widgets.dart';
 
 const _back = 'M15 18l-6-6 6-6';
@@ -337,93 +338,91 @@ class StudySetReadyScreen extends ConsumerWidget {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Green banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: AppColours.green.withOpacity(0.14),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColours.green.withOpacity(0.44), width: 1.5),
-                      ),
-                      child: Row(
+                child: latestSet == null
+                    ? const EmptyState(
+                        emoji: '✨',
+                        title: 'Nothing to review yet',
+                        message: 'Your generated study set will appear here after you scan a worksheet.',
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Green banner
                           Container(
-                            width: 36,
-                            height: 36,
-                            decoration: const BoxDecoration(color: AppColours.green, shape: BoxShape.circle),
-                            child: Center(child: appSvg(_check, size: 18, stroke: Colors.white, strokeWidth: 3)),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColours.green.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColours.green.withOpacity(0.44), width: 1.5),
+                            ),
+                            child: Row(
                               children: [
-                                Text('Saved to Study Sets',
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.green)),
-                                Text('Generated · review before approving',
-                                    style: TextStyle(fontSize: 12, color: AppColours.muted)),
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: const BoxDecoration(color: AppColours.green, shape: BoxShape.circle),
+                                  child: Center(child: appSvg(_check, size: 18, stroke: Colors.white, strokeWidth: 3)),
+                                ),
+                                const SizedBox(width: 12),
+                                const Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Saved to Study Sets',
+                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.green)),
+                                      Text('Generated · review before approving',
+                                          style: TextStyle(fontSize: 12, color: AppColours.muted)),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // Topic card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColours.line),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('TOPIC DETECTED',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColours.muted, letterSpacing: 0.4)),
+                          const SizedBox(height: 14),
+                          // Topic card (real study set)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: AppColours.line),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('TOPIC',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColours.muted, letterSpacing: 0.4)),
+                                const SizedBox(height: 4),
+                                Text(latestSet.title,
+                                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColours.ink)),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 7,
+                                  runSpacing: 7,
+                                  children: [
+                                    Pill(latestSet.subject, bg: AppColours.blueLight, fg: AppColours.blue),
+                                    Pill(latestSet.yearGroup, bg: AppColours.blueLight, fg: AppColours.blue),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _OutputRow('🃏', AppColours.blue, 'Flashcards', '${latestSet.cardCount} front/back cards',
+                              '${latestSet.cardCount}', 'Edit cards →', () => context.go(AppRoutes.editCards)),
+                          _OutputRow('🎯', AppColours.purple, 'Quiz', '${latestSet.questionCount} questions',
+                              '${latestSet.questionCount}', 'Edit quiz →', () => context.go(AppRoutes.editQuiz)),
                           const SizedBox(height: 4),
-                          Text(latestSet?.title ?? 'Equivalent Fractions',
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppColours.ink)),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 7,
-                            runSpacing: 7,
+                          Row(
                             children: [
-                              Pill(latestSet?.subject ?? 'Maths', bg: AppColours.blueLight, fg: AppColours.blue),
-                              Pill(latestSet?.yearGroup ?? 'Year 4', bg: AppColours.blueLight, fg: AppColours.blue),
-                              Pill('Age 8–10', bg: AppColours.amberLight, fg: AppColours.amber),
-                              Pill('Standard', bg: AppColours.subtle, fg: AppColours.muted),
+                              Expanded(child: _SecondaryBtn('🔄 Regenerate', () {})),
+                              const SizedBox(width: 10),
+                              Expanded(child: _SecondaryBtn('➕ Generate More', () {})),
                             ],
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    _OutputRow('🃏', AppColours.blue, 'Flashcards', '12 front/back cards with explanations',
-                        '12', 'Edit cards →', () => context.go(AppRoutes.editCards)),
-                    _OutputRow('🎯', AppColours.purple, 'Quiz', '8 multiple-choice & true/false questions',
-                        '8', 'Edit quiz →', () => context.go(AppRoutes.editQuiz)),
-                    _OutputRow('💡', AppColours.teal, 'Simple Explanation', '1 page · age 8–10 language',
-                        '1', 'View →', () {}),
-                    _OutputRow('✏️', AppColours.amber, 'Practice Questions', '20 questions · printable PDF',
-                        '20', 'View & Print →', () => context.go(AppRoutes.practiceQ)),
-                    _OutputRow('👪', AppColours.muted, 'Parent Help Guide', 'Tips for explaining at home',
-                        '1', 'View →', () {}),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Expanded(child: _SecondaryBtn('🔄 Regenerate', () {})),
-                        const SizedBox(width: 10),
-                        Expanded(child: _SecondaryBtn('➕ Generate More', () {})),
-                      ],
-                    ),
-                  ],
-                ),
               ),
             ),
             Padding(
@@ -526,12 +525,11 @@ class EditFlashcardsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cards = [
-      ('What is a fraction?', 'A fraction shows part of a whole.', 'Easy'),
-      ('What is a numerator?', 'The top number — it shows how many parts you have.', 'Easy'),
-      ('What is a denominator?', 'The bottom number — how many parts the whole is split into.', 'Med'),
-      ('Are 1/2 and 2/4 equivalent?', 'Yes — both equal one half.', 'Med'),
-    ];
+    final sets = ref.watch(studySetsStreamProvider).valueOrNull;
+    final latestSet = (sets == null || sets.isEmpty) ? null : sets.first;
+    final cardsAsync =
+        latestSet == null ? null : ref.watch(flashcardsBySetProvider(latestSet.id));
+    final cards = cardsAsync?.valueOrNull ?? const [];
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -547,27 +545,34 @@ class EditFlashcardsScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.blue)),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('4 of 12 cards · drag to reorder',
-                    style: TextStyle(fontSize: 13, color: AppColours.muted)),
+            if (latestSet != null && cards.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('${cards.length} cards · drag to reorder',
+                      style: const TextStyle(fontSize: 13, color: AppColours.muted)),
+                ),
               ),
-            ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
-                children: [
-                  ...cards.asMap().entries.map((e) => _FlashcardItem(
-                        num: e.key + 1,
-                        question: e.value.$1,
-                        answer: e.value.$2,
-                        difficulty: e.value.$3,
-                      )),
-                  _DashedAdd('+ Add card', () {}),
-                ],
-              ),
+              child: latestSet == null || cards.isEmpty
+                  ? const EmptyState(
+                      emoji: '🃏',
+                      title: 'No flashcards yet',
+                      message: 'Flashcards will appear here after you scan a worksheet and generate a set.',
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                      children: [
+                        ...cards.asMap().entries.map((e) => _FlashcardItem(
+                              num: e.key + 1,
+                              question: e.value.question,
+                              answer: e.value.answer,
+                              difficulty: e.value.difficulty,
+                            )),
+                        _DashedAdd('+ Add card', () {}),
+                      ],
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -667,6 +672,12 @@ class EditQuizScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final sets = ref.watch(studySetsStreamProvider).valueOrNull;
+    final latestSet = (sets == null || sets.isEmpty) ? null : sets.first;
+    final questionsAsync =
+        latestSet == null ? null : ref.watch(quizQuestionsBySetProvider(latestSet.id));
+    final questions = questionsAsync?.valueOrNull ?? const [];
+
     return Scaffold(
       backgroundColor: AppColours.background,
       body: SafeArea(
@@ -681,28 +692,35 @@ class EditQuizScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.purple)),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 10, 20, 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('3 of 8 questions · Multiple choice & true/false',
-                    style: TextStyle(fontSize: 13, color: AppColours.muted)),
+            if (latestSet != null && questions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('${questions.length} questions · Multiple choice & true/false',
+                      style: const TextStyle(fontSize: 13, color: AppColours.muted)),
+                ),
               ),
-            ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
-                children: [
-                  _QuizItem(num: 1, question: 'What is ½ of 10?', options: const ['2', '5', '10', '20'], correct: 1,
-                      explanation: '½ of 10 means splitting 10 into 2 equal parts and taking one — that\'s 5.'),
-                  _QuizItem(num: 2, question: 'Are 1/2 and 2/4 equivalent fractions?', options: const ['True', 'False'], correct: 0,
-                      explanation: 'Both fractions equal one half — they look different but have the same value.'),
-                  _QuizItem(num: 3, question: 'The bottom number of a fraction is called the…',
-                      options: const ['Numerator', 'Denominator', 'Equator', 'Divisor'], correct: 1,
-                      explanation: 'The denominator names the parts the whole is split into.'),
-                  _DashedAdd('+ Add question', () {}),
-                ],
-              ),
+              child: latestSet == null || questions.isEmpty
+                  ? const EmptyState(
+                      emoji: '🎯',
+                      title: 'No quiz questions yet',
+                      message: 'Quiz questions will appear here after you scan a worksheet and generate a set.',
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 6, 20, 20),
+                      children: [
+                        ...questions.asMap().entries.map((e) => _QuizItem(
+                              num: e.key + 1,
+                              question: e.value.questionText,
+                              options: e.value.options,
+                              correct: e.value.correctIndex,
+                              explanation: e.value.explanation,
+                            )),
+                        _DashedAdd('+ Add question', () {}),
+                      ],
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),

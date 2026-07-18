@@ -9,7 +9,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
+import '../../../domain/entities/progress_entity.dart';
 import '../providers/parent_provider.dart';
+import '../providers/insights_provider.dart';
 import 'parent_widgets.dart';
 
 const _back = 'M15 18l-6-6 6-6';
@@ -148,8 +150,11 @@ class SwitchKidModeScreen extends ConsumerWidget {
                                             Text(c.nickname,
                                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
                                             const SizedBox(height: 2),
-                                            Text('${c.yearGroup} · approved sets',
-                                                style: const TextStyle(fontSize: 13, color: AppColours.muted)),
+                                            Consumer(builder: (_, ref, __) {
+                                              final count = ref.watch(approvedSetCountProvider(c.id)).valueOrNull ?? 0;
+                                              return Text('${c.yearGroup} · $count approved set${count == 1 ? '' : 's'}',
+                                                  style: const TextStyle(fontSize: 13, color: AppColours.muted));
+                                            }),
                                           ],
                                         ),
                                       ),
@@ -224,11 +229,6 @@ class PracticeQuestionsScreen extends StatefulWidget {
 class _PracticeQuestionsScreenState extends State<PracticeQuestionsScreen> {
   int _level = 1;
   static const _levelLabels = ['Easier', 'Standard', 'Harder'];
-  static const _questions = [
-    ('Write three fractions equivalent to 1/2.', '2/4, 3/6, 4/8 (any three correct)', '3 marks'),
-    ('Circle the larger fraction: 2/5 or 3/5. Explain your answer.', '3/5 — same denominator, bigger numerator.', '2 marks'),
-    ('Shade 3/8 of this rectangle.', 'Shade 3 out of 8 equal sections.', '2 marks'),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -252,10 +252,10 @@ class _PracticeQuestionsScreenState extends State<PracticeQuestionsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Equivalent Fractions',
+                        const Text('Practice Questions',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
                         const SizedBox(height: 4),
-                        const Text('Maths · Year 4 · Age 8–10 · 20 questions',
+                        const Text('Generate a set from a scan to create printable questions.',
                             style: TextStyle(fontSize: 12, color: AppColours.muted)),
                         const SizedBox(height: 12),
                         Row(
@@ -284,43 +284,11 @@ class _PracticeQuestionsScreenState extends State<PracticeQuestionsScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  ..._questions.asMap().entries.map((e) => Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: AppColours.line),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Q${e.key + 1}',
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.blue)),
-                            const SizedBox(height: 6),
-                            Text(e.value.$1,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.ink)),
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppColours.green.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(10),
-                                border: const Border(left: BorderSide(color: AppColours.green, width: 3)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('MARK SCHEME · ${e.value.$3}',
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColours.green, letterSpacing: 0.5)),
-                                  const SizedBox(height: 4),
-                                  Text(e.value.$2, style: const TextStyle(fontSize: 13, color: AppColours.ink2)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
+                  const EmptyState(
+                    emoji: '📝',
+                    title: 'No questions yet',
+                    message: 'Practice questions will appear here after you scan a worksheet and generate a set.',
+                  ),
                 ],
               ),
             ),
@@ -769,18 +737,27 @@ class ParentProgressScreen extends ConsumerStatefulWidget {
 
 class _ParentProgressState extends ConsumerState<ParentProgressScreen> {
   bool _7days = true;
-  static const _subjects = [
-    ('📖 English', 0.88, AppColours.blue, 'Doing well'),
-    ('✏️ Spelling', 0.82, AppColours.teal, 'On track'),
-    ('➗ Maths', 0.64, AppColours.amber, 'Needs practice'),
-    ('🧪 Science', 0.71, AppColours.blue, 'Getting better'),
-  ];
+
+  static String _note(double pct) =>
+      pct >= 80 ? 'Doing well' : pct >= 65 ? 'On track' : 'Needs practice';
 
   @override
   Widget build(BuildContext context) {
     final child = ref.watch(selectedChildNotifierProvider).valueOrNull;
     final childrenAsync = ref.watch(childrenStreamProvider);
-    final name = child?.nickname ?? 'Your child';
+    final summary = ref.watch(childProgressProvider).valueOrNull;
+
+    final List<ProgressEntity> quizzes = summary == null
+        ? const []
+        : summary.sessions.where((s) => s.activityType == 'quiz').toList();
+    final flashcardsAnswered = summary == null
+        ? 0
+        : summary.sessions
+            .where((s) => s.activityType == 'flashcard')
+            .fold<int>(0, (a, s) => a + s.total);
+    final avgQuiz = quizzes.isEmpty
+        ? 0
+        : (quizzes.map((q) => q.percentage).reduce((a, b) => a + b) / quizzes.length).round();
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -862,79 +839,71 @@ class _ParentProgressState extends ConsumerState<ParentProgressScreen> {
                       error: (_, __) => const SizedBox(height: 52),
                     ),
                     const SizedBox(height: 14),
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.7,
-                      children: const [
-                        _StatTile('🃏', 'Flashcards', '86', '↑ +12', AppColours.green),
-                        _StatTile('🎯', 'Avg quiz', '78%', '↑ +6%', AppColours.green),
-                        _StatTile('⭐', 'Stars', '240', '↑ +42', AppColours.green),
-                        _StatTile('🔥', 'Streak', '4 days', '· best 7', AppColours.muted),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColours.line)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (summary == null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (summary.isEmpty)
+                      const EmptyState(
+                        emoji: '📊',
+                        title: 'No progress yet',
+                        message: 'Learning progress will appear here once your child starts studying.',
+                      )
+                    else ...[
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.7,
                         children: [
-                          const Text('Scores by Subject', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
-                          const SizedBox(height: 14),
-                          ..._subjects.map((s) => Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(s.$1, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.ink2)),
-                                        Text('${(s.$2 * 100).round()}%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: s.$3)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 5),
-                                    ScoreProgressBar(value: s.$2, colour: s.$3),
-                                    const SizedBox(height: 4),
-                                    Text(s.$4, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: s.$3)),
-                                  ],
-                                ),
-                              )),
+                          _StatTile('🃏', 'Flashcards', '$flashcardsAnswered', '', AppColours.muted),
+                          _StatTile('🎯', 'Avg quiz', '$avgQuiz%', '', AppColours.muted),
+                          _StatTile('⭐', 'Stars', '${child?.stars ?? 0}', '', AppColours.muted),
+                          _StatTile('🔥', 'Streak', '${child?.streak ?? 0} days', '', AppColours.muted),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColours.green.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColours.green.withOpacity(0.33)),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColours.line)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Scores by Subject', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
+                            const SizedBox(height: 14),
+                            if (summary.subjectScores.isEmpty)
+                              const Text('No quiz scores yet.',
+                                  style: TextStyle(fontSize: 13, color: AppColours.muted))
+                            else
+                              ...summary.subjectScores.entries.map((e) {
+                                final colour = _subjectTint(e.key);
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('${_subjectEmoji(e.key)} ${e.key}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.ink2)),
+                                          Text('${e.value.round()}%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: colour)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5),
+                                      ScoreProgressBar(value: e.value / 100, colour: colour),
+                                      const SizedBox(height: 4),
+                                      Text(_note(e.value), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: colour)),
+                                    ],
+                                  ),
+                                );
+                              }),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('💡', style: TextStyle(fontSize: 18)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('$name is doing well in spelling.',
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColours.ink)),
-                                const SizedBox(height: 2),
-                                const Text('Needs more practice with fractions — tap Practice Areas to create a focused set.',
-                                    style: TextStyle(fontSize: 13, color: AppColours.ink2, height: 1.5)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -984,16 +953,14 @@ class _StatTile extends StatelessWidget {
 class PracticeAreasScreen extends ConsumerWidget {
   const PracticeAreasScreen({super.key});
 
-  static const _topics = [
-    ('➗', 'Equivalent Fractions', 'Maths · 62%', '↓ 8%'),
-    ('✏️', 'Silent Letters', 'Spelling · 70%', '↑ 4%'),
-    ('🌿', 'Photosynthesis', 'Science · 68%', '—'),
-    ('📖', 'Apostrophes', 'English · 74%', '↑ 6%'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final child = ref.watch(selectedChildNotifierProvider).valueOrNull;
+    final summary = ref.watch(childProgressProvider).valueOrNull;
+    final weakest = summary == null
+        ? const <MapEntry<String, double>>[]
+        : (summary.subjectScores.entries.toList()
+          ..sort((a, b) => a.value.compareTo(b.value)));
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -1014,50 +981,49 @@ class PracticeAreasScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('These topics could use a bit more practice.',
-                      style: TextStyle(fontSize: 13, color: AppColours.muted)),
-                  const SizedBox(height: 16),
-                  ..._topics.map((t) {
-                    final trendColour = t.$4.startsWith('↓')
-                        ? AppColours.red
-                        : t.$4 == '—'
-                            ? AppColours.muted
-                            : AppColours.green;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColours.line)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              IconSquare(colour: AppColours.blue, size: 36, radius: 10, child: Text(t.$1, style: const TextStyle(fontSize: 18))),
-                              const SizedBox(width: 10),
-                              Expanded(child: Text(t.$2, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColours.ink))),
-                              Text(t.$4, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: trendColour)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(t.$3, style: const TextStyle(fontSize: 13, color: AppColours.muted)),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              _ActionBtn('✨ Create Set', () => context.go(AppRoutes.chooseOutput)),
-                              const SizedBox(width: 8),
-                              _ActionBtn('📚 Curriculum', () => context.go(AppRoutes.curriculum)),
-                              const SizedBox(width: 8),
-                              const Expanded(
-                                child: Text('✓ Improved',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.green)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                  if (summary == null)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 30, bottom: 16),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (weakest.isEmpty) ...[
+                    const Text('Weak areas will appear here once your child completes some quizzes.',
+                        style: TextStyle(fontSize: 13, color: AppColours.muted)),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    const Text('These topics could use a bit more practice.',
+                        style: TextStyle(fontSize: 13, color: AppColours.muted)),
+                    const SizedBox(height: 16),
+                    ...weakest.map((e) {
+                      final colour = _subjectTint(e.key);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColours.line)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                IconSquare(colour: colour, size: 36, radius: 10, child: Text(_subjectEmoji(e.key), style: const TextStyle(fontSize: 18))),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(e.key, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColours.ink))),
+                                Text('${e.value.round()}%', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: colour)),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                _ActionBtn('✨ Create Set', () => context.go(AppRoutes.chooseOutput)),
+                                const SizedBox(width: 8),
+                                _ActionBtn('📚 Curriculum', () => context.go(AppRoutes.curriculum)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -1111,6 +1077,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final childrenAsync = ref.watch(childrenStreamProvider);
+    final setsCount = ref.watch(studySetsStreamProvider).valueOrNull?.length ?? 0;
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -1190,7 +1157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           style: TextStyle(fontSize: 13, color: AppColours.muted, height: 1.6),
                         ),
                       ),
-                      _SettingRow('📁', 'Manage study sets', null, () {}),
+                      _SettingRow('📁', 'Manage study sets', '$setsCount saved', () {}),
                       _SettingRowDanger('⚠️', 'Clear all local data', () {}),
                     ],
                   ),

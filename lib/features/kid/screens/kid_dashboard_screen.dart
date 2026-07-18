@@ -9,6 +9,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
+import '../../../domain/entities/study_set_entity.dart';
+import '../../parent/providers/insights_provider.dart';
 import '../providers/kid_provider.dart';
 
 const _greyscale = ColorFilter.matrix(<double>[
@@ -24,8 +26,15 @@ class KidDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final childAsync = ref.watch(activeChildProvider);
+    final sets = ref.watch(approvedSetsProvider).valueOrNull ?? const <StudySetEntity>[];
+    final badges = ref.watch(kidBadgesProvider).valueOrNull ?? const [];
+    final badgeCount = badges.where((b) => b.isEarned).length;
     final content = childAsync.when(
-      data: (child) => _Body(child: child),
+      data: (child) => _Body(
+        child: child,
+        continueSet: sets.isEmpty ? null : sets.first,
+        badgeCount: badgeCount,
+      ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColours.kidBlue)),
       error: (_, __) => const Center(child: Text('Something went wrong')),
     );
@@ -119,18 +128,21 @@ class _KidSidebar extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.child});
+  const _Body({required this.child, this.continueSet, this.badgeCount = 0});
   final ChildEntity? child;
+  final StudySetEntity? continueSet;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top + 8;
     final nickname = child?.nickname ?? 'Learner';
-    final xp = child?.xp ?? 340;
-    final stars = child?.stars ?? 240;
-    final streak = child?.streak ?? 4;
-    final level = child?.level ?? 7;
-    final progress = child?.levelProgress ?? 0.68;
+    final xp = child?.xp ?? 0;
+    final stars = child?.stars ?? 0;
+    final streak = child?.streak ?? 0;
+    final level = child?.level ?? 1;
+    final progress = child?.levelProgress ?? 0.0;
+    final subjects = child?.subjects ?? const <String>[];
 
     return Column(
       children: [
@@ -199,7 +211,7 @@ class _Body extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(child: KidStatBubble(emoji: '⭐', value: '$stars', label: 'Stars')),
                   const SizedBox(width: 8),
-                  Expanded(child: KidStatBubble(emoji: '🏆', value: '3', label: 'Badges')),
+                  Expanded(child: KidStatBubble(emoji: '🏆', value: '$badgeCount', label: 'Badges')),
                 ],
               ),
               const SizedBox(height: 14),
@@ -271,11 +283,13 @@ class _Body extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('CONTINUE',
+                                Text(continueSet != null ? 'CONTINUE' : 'GET STARTED',
                                     style: GoogleFonts.nunito(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white.withOpacity(0.8), letterSpacing: 0.6)),
-                                Text('Fractions · Unit 3',
+                                Text(continueSet?.title ?? 'Start learning',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white)),
-                                Text('3 lessons left · 12 min',
+                                Text(continueSet?.subject ?? 'Open your learning path',
                                     style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.85))),
                               ],
                             ),
@@ -299,16 +313,15 @@ class _Body extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  Text('MY SUBJECTS',
-                      style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidMuted, letterSpacing: 0.8)),
-                  const SizedBox(height: 9),
-                  _subject('➗', 'Maths', AppColours.kidBlue, 3, 8, context),
-                  const SizedBox(height: 10),
-                  _subject('📖', 'English', AppColours.kidPurple, 5, 6, context),
-                  const SizedBox(height: 10),
-                  _subject('🧪', 'Science', AppColours.kidGreen, 2, 5, context),
-                  const SizedBox(height: 10),
-                  _subject('✏️', 'Spelling', AppColours.kidGreen, 4, 4, context),
+                  if (subjects.isNotEmpty) ...[
+                    Text('MY SUBJECTS',
+                        style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidMuted, letterSpacing: 0.8)),
+                    const SizedBox(height: 9),
+                    for (final s in subjects) ...[
+                      _subject(_subjectEmoji(s), s, _subjectColour(s), 0, 0, context),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -323,6 +336,23 @@ class _Body extends StatelessWidget {
         onTap: () => context.go(AppRoutes.learningPath),
         child: SubjectProgressRow(subject: name, emoji: emoji, colour: colour, done: done, total: total),
       );
+
+  static String _subjectEmoji(String subject) => switch (subject) {
+        'Maths' => '➗',
+        'English' => '📖',
+        'Science' => '🧪',
+        'Spelling' => '✏️',
+        'Reading' => '📚',
+        _ => '📘',
+      };
+
+  static Color _subjectColour(String subject) => switch (subject) {
+        'Maths' => AppColours.kidBlue,
+        'English' => AppColours.kidPurple,
+        'Science' => AppColours.kidGreen,
+        'Spelling' => AppColours.kidPink,
+        _ => AppColours.kidBlue,
+      };
 }
 
 class _QuickCard extends StatelessWidget {

@@ -21,6 +21,7 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
   late AnimationController _flipCtrl;
   late Animation<double> _flipAnim;
   bool _showFront = true;
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -28,6 +29,18 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
     _flipCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
     _flipAnim = Tween<double>(begin: 0, end: math.pi)
         .animate(CurvedAnimation(parent: _flipCtrl, curve: Curves.easeInOutCubic));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Load real flashcards for the child's first approved set. If none
+      // exists the session stays empty and we show an empty state.
+      final state = ref.read(flashcardSessionNotifierProvider);
+      if (state.cards.isEmpty) {
+        final sets = await ref.read(approvedSetsProvider.future);
+        if (sets.isNotEmpty && mounted) {
+          await ref.read(flashcardSessionNotifierProvider.notifier).loadSet(sets.first);
+        }
+      }
+      if (mounted) setState(() => _loaded = true);
+    });
   }
 
   @override
@@ -62,6 +75,42 @@ class _FlashcardStudyScreenState extends ConsumerState<FlashcardStudyScreen>
     final session = ref.watch(flashcardSessionNotifierProvider);
     final card = session.current;
     final subject = session.subject.isEmpty ? 'Maths' : session.subject;
+
+    if (card == null) {
+      return Scaffold(
+        backgroundColor: AppColours.kidBackground,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 20, 0),
+                  child: GestureDetector(
+                    onTap: () => context.go(AppRoutes.learningPath),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColours.line)),
+                      child: const Center(child: Icon(Icons.close, size: 20, color: AppColours.kidInk)),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _loaded
+                    ? const KidEmptyState(
+                        emoji: '🃏',
+                        title: 'No flashcards yet',
+                        message: 'Ask a grown-up to scan a worksheet — your flashcards will appear here!',
+                      )
+                    : const Center(child: CircularProgressIndicator(color: AppColours.kidBlue)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColours.kidBackground,

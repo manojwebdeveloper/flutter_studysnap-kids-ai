@@ -566,6 +566,75 @@ class KidStatBubble extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════
+// EMPTY STATES
+// ═══════════════════════════════════════════════════════
+
+/// Neutral empty state for Parent Mode — centred emoji, heading, one-liner.
+/// Uses the existing muted palette so it blends with surrounding cards.
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
+    required this.emoji,
+    required this.title,
+    required this.message,
+    this.compact = false,
+  });
+  final String emoji, title, message;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.symmetric(vertical: compact ? 16 : 32, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: TextStyle(fontSize: compact ? 30 : 40)),
+            const SizedBox(height: 10),
+            Text(title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColours.ink)),
+            const SizedBox(height: 4),
+            Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, height: 1.5, color: AppColours.muted)),
+          ],
+        ),
+      );
+}
+
+/// Kid Mode empty state — same idea, playful Nunito styling.
+class KidEmptyState extends StatelessWidget {
+  const KidEmptyState({
+    super.key,
+    required this.emoji,
+    required this.title,
+    required this.message,
+  });
+  final String emoji, title, message;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 52)),
+              const SizedBox(height: 14),
+              Text(title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(fontSize: 20, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+              const SizedBox(height: 6),
+              Text(message,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w700, height: 1.5, color: AppColours.kidMuted)),
+            ],
+          ),
+        ),
+      );
+}
+
+// ═══════════════════════════════════════════════════════
 // SUBJECT PROGRESS ROW (kid)
 // ═══════════════════════════════════════════════════════
 

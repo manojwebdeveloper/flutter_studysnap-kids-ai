@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
-import '../../../domain/entities/study_set_entity.dart';
 import '../providers/kid_provider.dart';
 
 const _quizDuration = 180;
@@ -20,35 +19,25 @@ class QuizScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizScreenState extends ConsumerState<QuizScreen> {
+  bool _loaded = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Load the child's first approved study set. If none exists yet the
+      // session stays empty and we show an empty state — never fake questions.
       final state = ref.read(quizSessionNotifierProvider);
       if (state.questions.isEmpty) {
-        await ref.read(quizSessionNotifierProvider.notifier).loadSet(
-              _dummySet(),
-              durationSeconds: _quizDuration,
-            );
+        final sets = await ref.read(approvedSetsProvider.future);
+        if (sets.isNotEmpty && mounted) {
+          await ref
+              .read(quizSessionNotifierProvider.notifier)
+              .loadSet(sets.first, durationSeconds: _quizDuration);
+        }
       }
+      if (mounted) setState(() => _loaded = true);
     });
-  }
-
-  StudySetEntity _dummySet() {
-    return StudySetEntity(
-      id: 'demo-set',
-      childId: '',
-      title: 'Fractions',
-      subject: 'Maths',
-      yearGroup: 'Year 4',
-      source: 'scanned',
-      status: 'approved',
-      isApproved: true,
-      cardCount: 5,
-      questionCount: 5,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
   }
 
   @override
@@ -63,9 +52,38 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     });
 
     if (question == null) {
-      return const Scaffold(
+      return Scaffold(
         backgroundColor: AppColours.kidBackground,
-        body: Center(child: CircularProgressIndicator(color: AppColours.kidPurple)),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 20, 0),
+                  child: GestureDetector(
+                    onTap: () => context.go(AppRoutes.kid),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColours.line)),
+                      child: const Center(child: Icon(Icons.close, size: 20, color: AppColours.kidInk)),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _loaded
+                    ? const KidEmptyState(
+                        emoji: '📝',
+                        title: 'No quiz yet',
+                        message: 'Ask a grown-up to scan a worksheet — your quiz questions will appear here!',
+                      )
+                    : const Center(child: CircularProgressIndicator(color: AppColours.kidPurple)),
+              ),
+            ],
+          ),
+        ),
       );
     }
 

@@ -70,7 +70,7 @@ class FlashcardSessionState {
   double get progress => total == 0 ? 0 : (currentIndex + 1) / total;
 
   int get xpEarned => gotCount * AppConstants.xpPerFlashcard;
-  int get starsEarned => (gotCount / total * 16).round();
+  int get starsEarned => total == 0 ? 0 : (gotCount / total * 16).round();
 
   FlashcardSessionState copyWith({
     List<FlashcardEntity>? cards,
@@ -111,11 +111,8 @@ class FlashcardSessionNotifier extends _$FlashcardSessionNotifier {
       difficulty: r.difficulty, orderIndex: r.orderIndex,
     )).toList();
 
-    // If no DB cards yet, use sample data so the screen works
-    final effective = cards.isNotEmpty ? cards : _sampleCards(set.id);
-
     state = FlashcardSessionState(
-      cards: effective, studySetId: set.id,
+      cards: cards, studySetId: set.id,
       studySetTitle: set.title, subject: set.subject,
     );
   }
@@ -171,19 +168,6 @@ class FlashcardSessionNotifier extends _$FlashcardSessionNotifier {
   }
 
   void reset() => state = const FlashcardSessionState();
-
-  List<FlashcardEntity> _sampleCards(String setId) => [
-    FlashcardEntity(id: '1', studySetId: setId, question: 'What is a denominator?',
-      answer: 'The bottom number — how many equal parts the whole is split into.', orderIndex: 0),
-    FlashcardEntity(id: '2', studySetId: setId, question: 'What is a numerator?',
-      answer: 'The top number — it shows how many of those parts you have.', orderIndex: 1),
-    FlashcardEntity(id: '3', studySetId: setId, question: 'Are ½ and 2/4 equivalent?',
-      answer: 'Yes! Both equal one half. Same value, different appearance.', orderIndex: 2),
-    FlashcardEntity(id: '4', studySetId: setId, question: 'What is ½ of 10?',
-      answer: '5 — split 10 into 2 equal groups and take one.', orderIndex: 3),
-    FlashcardEntity(id: '5', studySetId: setId, question: 'What does the fraction 3/4 mean?',
-      answer: '3 out of 4 equal parts of a whole.', orderIndex: 4),
-  ];
 }
 
 // ═══════════════════════════════════════════════════════
@@ -229,7 +213,7 @@ class QuizSessionState {
       : selectedIndex == current?.correctIndex;
 
   int get xpEarned => correctCount * AppConstants.xpPerQuizCorrect;
-  int get starsEarned => AppConstants.starsPerQuiz * correctCount ~/ total;
+  int get starsEarned => total == 0 ? 0 : AppConstants.starsPerQuiz * correctCount ~/ total;
 
   String get timerDisplay {
     final m = secondsRemaining ~/ 60;
@@ -290,15 +274,14 @@ class QuizSessionNotifier extends _$QuizSessionNotifier {
       type: r.type, orderIndex: r.orderIndex,
     )).toList();
 
-    final effective = questions.isNotEmpty ? questions : _sampleQuestions(set.id);
-
     state = QuizSessionState(
-      questions: effective, studySetId: set.id,
+      questions: questions, studySetId: set.id,
       studySetTitle: set.title, subject: set.subject,
       secondsRemaining: durationSeconds,
     );
 
-    _startTimer();
+    // Only run the countdown when there are real questions to answer.
+    if (questions.isNotEmpty) _startTimer();
   }
 
   void _startTimer() {
@@ -350,22 +333,4 @@ class QuizSessionNotifier extends _$QuizSessionNotifier {
     _timer?.cancel();
     state = const QuizSessionState();
   }
-
-  List<QuizQuestionEntity> _sampleQuestions(String setId) => [
-    QuizQuestionEntity(id: 'q1', studySetId: setId, questionText: 'What is ½ of 10?',
-      options: ['2', '5', '10', '20'], correctIndex: 1,
-      explanation: '½ of 10 means we split 10 into 2 equal groups and take one — that\'s 5.', orderIndex: 0),
-    QuizQuestionEntity(id: 'q2', studySetId: setId, questionText: 'Are 1/2 and 2/4 equivalent fractions?',
-      options: ['True', 'False'], correctIndex: 0,
-      explanation: 'Both fractions equal one half — they look different but have the same value.', type: 'true_false', orderIndex: 1),
-    QuizQuestionEntity(id: 'q3', studySetId: setId, questionText: 'The bottom number of a fraction is called the…',
-      options: ['Numerator', 'Denominator', 'Equator', 'Divisor'], correctIndex: 1,
-      explanation: 'Denominator names the parts the whole is split into.', orderIndex: 2),
-    QuizQuestionEntity(id: 'q4', studySetId: setId, questionText: 'What fraction is shaded if 3 out of 8 parts are coloured?',
-      options: ['3/5', '5/8', '3/8', '8/3'], correctIndex: 2,
-      explanation: '3 shaded out of 8 total parts = 3/8.', orderIndex: 3),
-    QuizQuestionEntity(id: 'q5', studySetId: setId, questionText: 'Which fraction is larger: 2/5 or 3/5?',
-      options: ['2/5', '3/5', 'They\'re equal', 'Can\'t tell'], correctIndex: 1,
-      explanation: 'Same denominator — the bigger numerator (3) means the bigger fraction.', orderIndex: 4),
-  ];
 }

@@ -11,6 +11,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../domain/entities/badge_entity.dart';
+import '../../parent/providers/insights_provider.dart';
 import '../providers/kid_provider.dart';
 
 const _lockIcon =
@@ -29,10 +31,10 @@ class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(quizSessionNotifierProvider);
     final score = session.correctCount;
-    final total = session.total == 0 ? 5 : session.total;
-    final pct = (score / total * 100).round();
-    final xp = session.xpEarned == 0 ? 40 : session.xpEarned;
-    final stars = session.starsEarned == 0 ? 16 : session.starsEarned;
+    final total = session.total;
+    final pct = total == 0 ? 0 : (score / total * 100).round();
+    final xp = session.xpEarned;
+    final stars = session.starsEarned;
     final amazing = pct >= 80;
 
     return Scaffold(
@@ -376,22 +378,14 @@ class _EarnedTile extends StatelessWidget {
 class RewardsScreen extends ConsumerWidget {
   const RewardsScreen({super.key});
 
-  static const _badges = [
-    _Badge('🥇', 'Maths Starter', true, true),
-    _Badge('⭐', 'Spelling Star', true, false),
-    _Badge('🃏', 'Flashcard Hero', true, false),
-    _Badge('🔬', 'Science Explorer', false, false),
-    _Badge('🏆', 'Quiz Champion', false, false),
-    _Badge('🔥', '7-Day Learner', false, false),
-    _Badge('✏️', 'Practice Pro', false, false),
-    _Badge('🚀', 'Super Learner', false, false),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final childAsync = ref.watch(activeChildProvider);
     final child = childAsync.valueOrNull;
-    final earnedCount = _badges.where((b) => b.earned).length;
+    final badges = ref.watch(kidBadgesProvider).valueOrNull ?? const <BadgeEntity>[];
+    final display = [for (final b in badges) _Badge(b.emoji, b.label, b.isEarned, b.isNew)];
+    final earnedCount = display.where((b) => b.earned).length;
+    final badgeProgress = display.isEmpty ? 0.0 : earnedCount / display.length;
 
     return Scaffold(
       backgroundColor: AppColours.kidBackground,
@@ -447,7 +441,7 @@ class RewardsScreen extends ConsumerWidget {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${child?.stars ?? 240}',
+                                  Text('${child?.stars ?? 0}',
                                       style: GoogleFonts.nunito(fontSize: 38, fontWeight: FontWeight.w900, color: Colors.white)),
                                   Text('Total Stars',
                                       style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white.withOpacity(0.9))),
@@ -458,16 +452,16 @@ class RewardsScreen extends ConsumerWidget {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              _MiniStat('⚡', '${child?.xp ?? 340} XP'),
+                              _MiniStat('⚡', '${child?.xp ?? 0} XP'),
                               const SizedBox(width: 20),
-                              _MiniStat('🔥', '${child?.streak ?? 4} streak'),
+                              _MiniStat('🔥', '${child?.streak ?? 0} streak'),
                             ],
                           ),
                         ],
                       ),
                     ).animate().fadeIn(duration: 300.ms).slideY(begin: .05, end: 0),
                     const SizedBox(height: 14),
-                    // Science Explorer progress
+                    // Badges earned progress (real)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColours.line)),
@@ -477,10 +471,10 @@ class RewardsScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('🔬 Science Explorer',
+                                Text('🏅 Badges earned',
                                     style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
                                 const SizedBox(height: 2),
-                                Text('2 more quizzes to unlock!',
+                                Text('Keep studying to unlock more!',
                                     style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.kidMuted)),
                               ],
                             ),
@@ -488,7 +482,7 @@ class RewardsScreen extends ConsumerWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text('3/5',
+                              Text('$earnedCount/${display.length}',
                                   style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: AppColours.kidBlue)),
                               const SizedBox(height: 5),
                               Container(
@@ -496,7 +490,7 @@ class RewardsScreen extends ConsumerWidget {
                                 height: 6,
                                 decoration: BoxDecoration(color: AppColours.line, borderRadius: BorderRadius.circular(999)),
                                 child: FractionallySizedBox(
-                                  widthFactor: .6,
+                                  widthFactor: badgeProgress.clamp(0.0, 1.0),
                                   alignment: Alignment.centerLeft,
                                   child: Container(decoration: BoxDecoration(color: AppColours.kidBlue, borderRadius: BorderRadius.circular(999))),
                                 ),
@@ -507,7 +501,7 @@ class RewardsScreen extends ConsumerWidget {
                       ),
                     ).animate(delay: 80.ms).fadeIn(duration: 300.ms),
                     const SizedBox(height: 16),
-                    Text('BADGES · $earnedCount of ${_badges.length}',
+                    Text('BADGES · $earnedCount of ${display.length}',
                         style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidMuted, letterSpacing: 0.8)),
                     const SizedBox(height: 10),
                     GridView.count(
@@ -517,7 +511,7 @@ class RewardsScreen extends ConsumerWidget {
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
                       childAspectRatio: 0.9,
-                      children: _badges
+                      children: display
                           .asMap()
                           .entries
                           .map((e) => _BadgeCard(badge: e.value)

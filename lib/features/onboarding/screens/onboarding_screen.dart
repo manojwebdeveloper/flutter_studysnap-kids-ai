@@ -429,7 +429,7 @@ class _ArtPage3 extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
-                        Text("Aarav's Week",
+                        Text("This Week",
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColours.ink)),
                         Text('Year 4 · Maths + English',
                             style: TextStyle(fontSize: 12, color: AppColours.muted)),
