@@ -52,7 +52,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Increment this whenever the schema changes and add a migration step.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,7 +61,11 @@ class AppDatabase extends _$AppDatabase {
           await _seedInitialData();
         },
         onUpgrade: (m, from, to) async {
-          // Add migration steps here as the schema evolves.
+          // v2: saved-scan PDF path + page count.
+          if (from < 2) {
+            await m.addColumn(scanLibraryTable, scanLibraryTable.pdfPath);
+            await m.addColumn(scanLibraryTable, scanLibraryTable.pageCount);
+          }
         },
         beforeOpen: (details) async {
           // Enable foreign key constraints.

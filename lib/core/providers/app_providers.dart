@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../database/app_database.dart';
 import '../network/api_client.dart';
+import '../../data/datasources/local/document_scanner_service.dart';
 import '../../data/datasources/remote/claude_service.dart';
 import '../../data/repositories/repository_impls.dart';
 import '../../domain/repositories/repositories.dart';
@@ -42,6 +43,11 @@ final localAuthProvider = Provider<LocalAuthentication>(
 
 final claudeServiceProvider = Provider<ClaudeService>(
   (ref) => ClaudeService(ref.watch(apiClientProvider)),
+);
+
+/// Native document scanner (ML Kit / VisionKit → PDF).
+final documentScannerServiceProvider = Provider<DocumentScannerService>(
+  (_) => const DocumentScannerService(),
 );
 
 // ── DAOs ──────────────────────────────────────────────────

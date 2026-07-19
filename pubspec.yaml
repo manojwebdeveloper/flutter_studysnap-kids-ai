@@ -39,8 +39,11 @@ dependencies:
   # ── Environment config ────────────────────────────────────
   flutter_dotenv: ^5.1.0
 
-  # ── Document scanning (native iOS VNDocumentCameraViewController) ──
-  cunning_document_scanner: ^1.0.4
+  # ── Document scanning (native ML Kit Document Scanner / VisionKit → PDF) ──
+  flutter_doc_scanner: ^0.0.15
+
+  # ── Opening saved PDFs in the device's viewer ────────────
+  open_filex: ^4.5.0
 
   # ── On-device OCR (privacy-first, no API cost) ───────────
   google_mlkit_text_recognition: ^0.13.0
@@ -52,9 +55,6 @@ dependencies:
 
   # ── Biometrics / Face ID for Parent PIN ──────────────────
   local_auth: ^2.2.0
-
-  # ── Permissions ───────────────────────────────────────────
-  permission_handler: ^11.3.1
 
   # ── Fonts ─────────────────────────────────────────────────
   google_fonts: ^6.2.1

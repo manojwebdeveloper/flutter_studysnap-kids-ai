@@ -109,9 +109,11 @@ class ScanEntity with _$ScanEntity {
     String? imagePath,
     String? extractedText,
     @Default(0.0) double confidence,
-    required String scanMethod,  // 'photo' | 'upload' | 'paste'
+    required String scanMethod,  // 'photo' | 'upload' | 'paste' | 'scan'
     @Default('pending') String status,
     String? studySetId,
+    String? pdfPath,
+    @Default(0) int pageCount,
     required DateTime scannedAt,
   }) = _ScanEntity;
 }

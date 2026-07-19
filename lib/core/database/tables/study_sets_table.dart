@@ -87,10 +87,12 @@ class ScanLibraryTable extends Table {
   TextColumn get imagePath     => text().nullable()(); // local file path
   TextColumn get extractedText => text().nullable()();
   RealColumn get confidence    => real().withDefault(const Constant(0.0))();
-  TextColumn get scanMethod    => text()(); // 'photo' | 'upload' | 'paste'
+  TextColumn get scanMethod    => text()(); // 'photo' | 'upload' | 'paste' | 'scan'
   TextColumn get status        => text().withDefault(const Constant('pending'))();
   // 'pending' | 'approved' | 'needs_review'
   TextColumn get studySetId    => text().nullable()();
+  TextColumn get pdfPath       => text().nullable()(); // saved multi-page PDF
+  IntColumn  get pageCount     => integer().withDefault(const Constant(0))();
   DateTimeColumn get scannedAt => dateTime()();
 
   @override

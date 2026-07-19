@@ -1,16 +1,22 @@
 // ═══════════════════════════════════════════════════════
 // S10 · SCAN LIBRARY   ·   S11 · OCR REVIEW
 // ═══════════════════════════════════════════════════════
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:open_filex/open_filex.dart';
+
+import '../../../core/providers/app_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/scan_entity.dart';
 import '../providers/parent_provider.dart';
+import '../scan_flow.dart';
 import 'parent_widgets.dart';
 
 const _plusIcon = 'M12 5v14M5 12h14';
@@ -71,7 +77,7 @@ class ScanLibraryScreen extends ConsumerWidget {
                         style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColours.ink)),
                   ),
                   GestureDetector(
-                    onTap: () => context.go(AppRoutes.ocrReview),
+                    onTap: () => startScan(context, ref),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
@@ -110,19 +116,13 @@ class ScanLibraryScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       scansAsync.when(
-                        data: (scans) {
-                          final approved = scans.where((s) => s.status == 'approved').length;
-                          final pending = scans.where((s) => s.status == 'needs_review').length;
-                          return Row(
-                            children: [
-                              _StatCard(label: 'TOTAL', value: '${scans.length}'),
-                              const SizedBox(width: 9),
-                              _StatCard(label: 'APPROVED', value: '$approved', colour: AppColours.green),
-                              const SizedBox(width: 9),
-                              _StatCard(label: 'PENDING', value: '$pending', colour: AppColours.amber),
-                            ],
-                          );
-                        },
+                        // No approval step yet this session — show the real
+                        // total only, never fabricated approved/pending counts.
+                        data: (scans) => Row(
+                          children: [
+                            _StatCard(label: 'TOTAL SCANS', value: '${scans.length}'),
+                          ],
+                        ),
                         loading: () => const SizedBox(height: 70),
                         error: (_, __) => const SizedBox(height: 70),
                       ),
@@ -131,7 +131,7 @@ class ScanLibraryScreen extends ConsumerWidget {
                       const SizedBox(height: 10),
                       scansAsync.when(
                         data: (scans) => scans.isEmpty
-                            ? _EmptyState(onScan: () => context.go(AppRoutes.ocrReview))
+                            ? _EmptyState(onScan: () => startScan(context, ref))
                             : _ScanList(scans: scans),
                         loading: () => const Center(child: CircularProgressIndicator()),
                         error: (e, _) => Text('Error: $e'),
@@ -357,81 +357,144 @@ class _DateFolderState extends State<_DateFolder> {
   }
 }
 
-class _WsCard extends StatelessWidget {
+class _WsCard extends ConsumerWidget {
   const _WsCard({required this.scan});
   final ScanEntity scan;
 
-  String _typeEmoji() => switch (scan.scanMethod) { 'photo' => '📷', 'upload' => '🖼', _ => '📝' };
   String _time() =>
       '${scan.scannedAt.hour.toString().padLeft(2, '0')}:${scan.scannedAt.minute.toString().padLeft(2, '0')}';
 
-  @override
-  Widget build(BuildContext context) {
-    final tint = _subjectTint(scan.subject);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColours.line),
-      ),
-      child: Row(
-        children: [
-          // Mini thumbnail
-          Container(
-            width: 48,
-            height: 60,
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppColours.subtle,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final w in const [1.0, 0.7, 0.85, 0.5])
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: w,
-                      child: Container(height: 3, color: tint.withOpacity(0.35)),
-                    ),
-                  ),
-                const Spacer(),
-                Text(_typeEmoji(), style: const TextStyle(fontSize: 12)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(scan.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColours.ink)),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    Pill(scan.subject, bg: tint.withOpacity(0.14), fg: tint),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text('${scan.scanMethod} · ${_time()}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, color: AppColours.muted)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                StatusPill(scan.status),
-              ],
-            ),
+  Future<void> _open(BuildContext context) async {
+    final path = scan.pdfPath;
+    if (path == null || path.isEmpty || !File(path).existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This scan file could not be found.')),
+      );
+      return;
+    }
+    await OpenFilex.open(path);
+  }
+
+  Future<void> _rename(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(text: scan.title);
+    final newTitle = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename scan'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Scan name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Save'),
           ),
         ],
+      ),
+    );
+    if (newTitle != null && newTitle.isNotEmpty) {
+      await ref.read(scanDaoProvider).updateTitle(scan.id, newTitle);
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete scan?'),
+        content: const Text('This removes the saved PDF from this device. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: AppColours.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final path = scan.pdfPath;
+    if (path != null && path.isNotEmpty) {
+      final file = File(path);
+      if (file.existsSync()) {
+        try {
+          await file.delete();
+        } catch (_) {/* best-effort */}
+      }
+    }
+    await ref.read(scanDaoProvider).deleteScan(scan.id);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasSubject = scan.subject.isNotEmpty;
+    final tint = hasSubject ? _subjectTint(scan.subject) : AppColours.blue;
+    return GestureDetector(
+      onTap: () => _open(context),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColours.line),
+        ),
+        child: Row(
+          children: [
+            // PDF icon
+            Container(
+              width: 46,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColours.blue.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Center(child: Text('📄', style: TextStyle(fontSize: 24))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(scan.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColours.ink)),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      if (hasSubject) ...[
+                        Pill(scan.subject, bg: tint.withOpacity(0.14), fg: tint),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text('${scan.pageCount} page${scan.pageCount == 1 ? '' : 's'} · ${_time()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, color: AppColours.muted)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppColours.muted, size: 20),
+              onSelected: (v) {
+                if (v == 'rename') _rename(context, ref);
+                if (v == 'delete') _delete(context, ref);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'rename', child: Text('Rename')),
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -76,7 +76,8 @@ Stream<List<ScanEntity>> scanLibraryStream(ScanLibraryStreamRef ref) {
               subject: r.subject, imagePath: r.imagePath,
               extractedText: r.extractedText, confidence: r.confidence,
               scanMethod: r.scanMethod, status: r.status,
-              studySetId: r.studySetId, scannedAt: r.scannedAt,
+              studySetId: r.studySetId, pdfPath: r.pdfPath,
+              pageCount: r.pageCount, scannedAt: r.scannedAt,
             )).toList())
         : const Stream.empty(),
     loading: () => const Stream.empty(),

@@ -201,6 +201,22 @@ class ScanDao extends DatabaseAccessor<AppDatabase> with _$ScanDaoMixin {
         ScanLibraryTableCompanion(studySetId: Value(studySetId)),
       );
 
+  /// Rename a saved scan.
+  Future<void> updateTitle(String id, String title) =>
+      (update(scanLibraryTable)..where((t) => t.id.equals(id))).write(
+        ScanLibraryTableCompanion(title: Value(title)),
+      );
+
+  /// Tag a saved scan with a subject.
+  Future<void> updateSubject(String id, String subject) =>
+      (update(scanLibraryTable)..where((t) => t.id.equals(id))).write(
+        ScanLibraryTableCompanion(subject: Value(subject)),
+      );
+
+  /// Delete a saved scan record.
+  Future<void> deleteScan(String id) =>
+      (delete(scanLibraryTable)..where((t) => t.id.equals(id))).go();
+
   Future<int> countByChild(String childId) async {
     final count = countAll();
     final query = selectOnly(scanLibraryTable)

@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../scan_flow.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
 import '../providers/parent_provider.dart';
@@ -344,16 +345,16 @@ class _ScanCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              _ScanOption('📷', 'Take Photo', 'Best quality', () => context.go(AppRoutes.scan)),
+              _ScanOption('📷', 'Take Photo', 'Best quality', () => startScan(context, ref)),
               const SizedBox(width: 8),
-              _ScanOption('🖼', 'Upload', 'From files', () => context.go(AppRoutes.scan)),
+              _ScanOption('🖼', 'Upload', 'From files', () => startScan(context, ref)),
               const SizedBox(width: 8),
               _ScanOption('📝', 'Paste Text', 'Type or paste', () => context.go(AppRoutes.scan)),
             ],
           ),
           const SizedBox(height: 14),
           GestureDetector(
-            onTap: () => context.go(AppRoutes.scan),
+            onTap: () => startScan(context, ref),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 13),
