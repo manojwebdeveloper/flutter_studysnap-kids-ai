@@ -104,8 +104,14 @@ GoRouter appRouter(AppRouterRef ref) {
         ],
       ),
       // Parent screens outside shell (full-screen, no bottom nav)
-      GoRoute(path: AppRoutes.ocrReview,     builder: (_, __) => const OcrReviewScreen()),
-      GoRoute(path: AppRoutes.chooseOutput,  builder: (_, __) => const ChooseOutputScreen()),
+      GoRoute(
+        path: AppRoutes.ocrReview,
+        builder: (_, state) => OcrReviewScreen(scanId: state.uri.queryParameters['scanId']),
+      ),
+      GoRoute(
+        path: AppRoutes.chooseOutput,
+        builder: (_, state) => ChooseOutputScreen(scanId: state.uri.queryParameters['scanId']),
+      ),
       GoRoute(path: AppRoutes.studySetReady, builder: (_, __) => const StudySetReadyScreen()),
       GoRoute(path: AppRoutes.editCards,     builder: (_, __) => const EditFlashcardsScreen()),
       GoRoute(path: AppRoutes.editQuiz,      builder: (_, __) => const EditQuizScreen()),
@@ -140,29 +146,32 @@ GoRouter appRouter(AppRouterRef ref) {
   );
 }
 
-/// Global redirect logic:
-/// - First launch → onboarding
-/// - Onboarding done but no PIN → parentPin
-/// - Otherwise → let through
-Future<String?> _globalRedirect(BuildContext context, GoRouterState state) async {
+/// Launch-time flags, read **once** at startup (see [initStartupFlags]) and
+/// held in memory. The redirect reads these synchronously so it never touches
+/// storage on every navigation event.
+class StartupFlags {
+  static bool onboardingDone = false;
+  static bool pinSet = false;
+}
+
+/// Reads the onboarding / PIN flags from storage a single time. Call this in
+/// `main()` before `runApp`.
+Future<void> initStartupFlags() async {
   final prefs = await SharedPreferences.getInstance();
-  final onboardingDone = prefs.getBool(AppConstants.keyOnboardingDone) ?? false;
-  final pinSet         = prefs.getBool(AppConstants.keyParentPinSet)   ?? false;
+  StartupFlags.onboardingDone = prefs.getBool(AppConstants.keyOnboardingDone) ?? false;
+  StartupFlags.pinSet = prefs.getBool(AppConstants.keyParentPinSet) ?? false;
+}
 
-  final isOnboarding = state.matchedLocation.startsWith('/onboarding') ||
-      state.matchedLocation == AppRoutes.splash;
+/// Global redirect — deliberately **only** gates the initial launch
+/// destination (splash). Every in-app route, including the whole scan flow,
+/// returns null so navigation is never bounced mid-flow.
+String? _globalRedirect(BuildContext context, GoRouterState state) {
+  // Only the launch destination is gated; everything else proceeds freely.
+  if (state.matchedLocation != AppRoutes.splash) return null;
 
-  // Not onboarded yet → always go to onboarding
-  if (!onboardingDone && !isOnboarding && state.matchedLocation != AppRoutes.splash) {
-    return AppRoutes.onboarding;
-  }
-
-  // Onboarding done but no PIN
-  if (onboardingDone && !pinSet && state.matchedLocation == AppRoutes.splash) {
-    return AppRoutes.parentPin;
-  }
-
-  return null; // No redirect needed
+  if (!StartupFlags.onboardingDone) return AppRoutes.onboarding;
+  if (!StartupFlags.pinSet) return AppRoutes.parentPin;
+  return null; // returning user — let the splash screen route onward
 }
 
 class _RouteObserver extends NavigatorObserver {

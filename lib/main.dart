@@ -43,6 +43,10 @@ Future<void> main() async {
     await prefs.setBool('app_initialized', true);
   }
 
+  // Read the onboarding / PIN flags once so the router redirect never has to
+  // touch storage on every navigation (which could bounce mid-flow).
+  await initStartupFlags();
+
   log.i('StudySnap Kids AI starting — env: ${AppEnv.appEnv}');
 
   runApp(

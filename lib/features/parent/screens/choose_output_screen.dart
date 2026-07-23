@@ -70,7 +70,11 @@ class _DashedAdd extends StatelessWidget {
 // ═══════════════════════════════════════════════════════
 
 class ChooseOutputScreen extends ConsumerStatefulWidget {
-  const ChooseOutputScreen({super.key});
+  const ChooseOutputScreen({super.key, this.scanId});
+
+  /// The scan whose extracted text feeds generation, carried through the route.
+  final String? scanId;
+
   @override
   ConsumerState<ChooseOutputScreen> createState() => _ChooseOutputScreenState();
 }
@@ -114,7 +118,7 @@ class _ChooseOutputScreenState extends ConsumerState<ChooseOutputScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _header('Create Study Set', () => context.go(AppRoutes.ocrReview)),
+            _header('Create Study Set', () => context.canPop() ? context.pop() : context.go(AppRoutes.scan)),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
@@ -256,7 +260,7 @@ class _ChooseOutputScreenState extends ConsumerState<ChooseOutputScreen> {
                           ocrState.subject,
                           child?.yearGroup ?? 'Year 4',
                         );
-                        if (ok && context.mounted) context.go(AppRoutes.studySetReady);
+                        if (ok && context.mounted) context.push(AppRoutes.studySetReady);
                       },
               ),
             ),
@@ -334,7 +338,7 @@ class StudySetReadyScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _header('Study Set Ready', () => context.go(AppRoutes.chooseOutput)),
+            _header('Study Set Ready', () => context.canPop() ? context.pop() : context.go(AppRoutes.studySets)),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
@@ -410,9 +414,9 @@ class StudySetReadyScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 14),
                           _OutputRow('🃏', AppColours.blue, 'Flashcards', '${latestSet.cardCount} front/back cards',
-                              '${latestSet.cardCount}', 'Edit cards →', () => context.go(AppRoutes.editCards)),
+                              '${latestSet.cardCount}', 'Edit cards →', () => context.push(AppRoutes.editCards)),
                           _OutputRow('🎯', AppColours.purple, 'Quiz', '${latestSet.questionCount} questions',
-                              '${latestSet.questionCount}', 'Edit quiz →', () => context.go(AppRoutes.editQuiz)),
+                              '${latestSet.questionCount}', 'Edit quiz →', () => context.push(AppRoutes.editQuiz)),
                           const SizedBox(height: 4),
                           Row(
                             children: [
@@ -538,9 +542,9 @@ class EditFlashcardsScreen extends ConsumerWidget {
           children: [
             _header(
               'Edit Flashcards',
-              () => context.go(AppRoutes.studySetReady),
+              () => context.pop(),
               action: GestureDetector(
-                onTap: () => context.go(AppRoutes.studySetReady),
+                onTap: () => context.pop(),
                 child: const Text('Save',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.blue)),
               ),
@@ -576,7 +580,7 @@ class EditFlashcardsScreen extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: PrimaryButton(label: 'Save Flashcards', onPressed: () => context.go(AppRoutes.studySetReady)),
+              child: PrimaryButton(label: 'Save Flashcards', onPressed: () => context.pop()),
             ),
           ],
         ),
@@ -685,9 +689,9 @@ class EditQuizScreen extends ConsumerWidget {
           children: [
             _header(
               'Edit Quiz',
-              () => context.go(AppRoutes.studySetReady),
+              () => context.pop(),
               action: GestureDetector(
-                onTap: () => context.go(AppRoutes.studySetReady),
+                onTap: () => context.pop(),
                 child: const Text('Save',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.purple)),
               ),
@@ -725,7 +729,7 @@ class EditQuizScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: PrimaryButton(
-                  label: 'Save Quiz', colour: AppColours.purple, onPressed: () => context.go(AppRoutes.studySetReady)),
+                  label: 'Save Quiz', colour: AppColours.purple, onPressed: () => context.pop()),
             ),
           ],
         ),

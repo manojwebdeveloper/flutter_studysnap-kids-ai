@@ -8,6 +8,7 @@ import '../network/api_client.dart';
 import '../../data/datasources/local/document_scanner_service.dart';
 import '../../data/datasources/remote/claude_service.dart';
 import '../../data/repositories/repository_impls.dart';
+import '../../domain/entities/scan_entity.dart';
 import '../../domain/repositories/repositories.dart';
 
 // ── Infrastructure ────────────────────────────────────────
@@ -49,6 +50,29 @@ final claudeServiceProvider = Provider<ClaudeService>(
 final documentScannerServiceProvider = Provider<DocumentScannerService>(
   (_) => const DocumentScannerService(),
 );
+
+/// Loads a single saved scan by id (used to carry the current scan through the
+/// review → output flow instead of relying on a provider that can reset).
+final scanByIdProvider =
+    FutureProvider.autoDispose.family<ScanEntity?, String>((ref, id) async {
+  final row = await ref.watch(scanDaoProvider).getById(id);
+  if (row == null) return null;
+  return ScanEntity(
+    id: row.id,
+    childId: row.childId,
+    title: row.title,
+    subject: row.subject,
+    imagePath: row.imagePath,
+    extractedText: row.extractedText,
+    confidence: row.confidence,
+    scanMethod: row.scanMethod,
+    status: row.status,
+    studySetId: row.studySetId,
+    pdfPath: row.pdfPath,
+    pageCount: row.pageCount,
+    scannedAt: row.scannedAt,
+  );
+});
 
 // ── DAOs ──────────────────────────────────────────────────
 

@@ -23,9 +23,12 @@ const _months = [
 enum ScanOutcome { saved, cancelled, failed }
 
 class ScanFlowResult {
-  const ScanFlowResult(this.outcome, {this.message});
+  const ScanFlowResult(this.outcome, {this.message, this.scanId});
   final ScanOutcome outcome;
   final String? message;
+
+  /// The id of the newly-saved scan (only set when [outcome] is `saved`).
+  final String? scanId;
 }
 
 /// Launches the native scanner, copies the resulting PDF into the app's
@@ -46,6 +49,7 @@ Future<ScanFlowResult> runScanFlow(WidgetRef ref) async {
     case Success(data: final pdf):
       if (pdf == null) return const ScanFlowResult(ScanOutcome.cancelled);
       try {
+        // 1. Copy the temp/cache PDF into a permanent location we control.
         final dir = await getApplicationDocumentsDirectory();
         final scansDir = Directory(p.join(dir.path, 'scans'));
         if (!scansDir.existsSync()) scansDir.createSync(recursive: true);
@@ -54,6 +58,14 @@ Future<ScanFlowResult> runScanFlow(WidgetRef ref) async {
         final dest = p.join(scansDir.path, '$id.pdf');
         await File(pdf.pdfPath).copy(dest);
 
+        // 2. Confirm the copy actually landed on disk BEFORE touching the DB,
+        //    so we never create a record pointing at a missing file.
+        if (!await File(dest).exists()) {
+          return const ScanFlowResult(ScanOutcome.failed,
+              message: 'Could not save the scan. Please try again.');
+        }
+
+        // 3. Only now create the record — storing the permanent path.
         final now = DateTime.now();
         final title = 'Scan ${now.day} ${_months[now.month]} ${now.year}';
 
@@ -72,7 +84,7 @@ Future<ScanFlowResult> runScanFlow(WidgetRef ref) async {
 
         // The free-scan counter is a FutureProvider — nudge it to recompute.
         ref.invalidate(scanCountProvider);
-        return const ScanFlowResult(ScanOutcome.saved);
+        return ScanFlowResult(ScanOutcome.saved, scanId: id);
       } catch (_) {
         return const ScanFlowResult(ScanOutcome.failed,
             message: 'Could not save the scan. Please try again.');
@@ -81,13 +93,15 @@ Future<ScanFlowResult> runScanFlow(WidgetRef ref) async {
 }
 
 /// Widget-facing entry point: runs the scan flow and handles navigation and
-/// error feedback. On success it opens the scan library so the new scan shows.
+/// error feedback. On success it moves **forward** into the review flow
+/// (via `push`, carrying the scan id) so the flow state is preserved and the
+/// parent can step back without losing it.
 Future<void> startScan(BuildContext context, WidgetRef ref) async {
   final result = await runScanFlow(ref);
   if (!context.mounted) return;
   switch (result.outcome) {
     case ScanOutcome.saved:
-      context.go(AppRoutes.scan);
+      context.push('${AppRoutes.ocrReview}?scanId=${result.scanId}');
     case ScanOutcome.cancelled:
       break; // return quietly
     case ScanOutcome.failed:

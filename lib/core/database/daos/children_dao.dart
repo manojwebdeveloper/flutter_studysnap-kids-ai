@@ -188,6 +188,9 @@ class ScanDao extends DatabaseAccessor<AppDatabase> with _$ScanDaoMixin {
             ..orderBy([(t) => OrderingTerm.desc(t.scannedAt)]))
           .get();
 
+  Future<ScanLibraryTableData?> getById(String id) =>
+      (select(scanLibraryTable)..where((t) => t.id.equals(id))).getSingleOrNull();
+
   Future<void> insertScan(ScanLibraryTableCompanion scan) =>
       into(scanLibraryTable).insert(scan);
 

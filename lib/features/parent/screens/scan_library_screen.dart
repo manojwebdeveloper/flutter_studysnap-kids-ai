@@ -532,7 +532,12 @@ class _EmptyState extends StatelessWidget {
 // ═══════════════════════════════════════════════════════
 
 class OcrReviewScreen extends ConsumerStatefulWidget {
-  const OcrReviewScreen({super.key});
+  const OcrReviewScreen({super.key, this.scanId});
+
+  /// The scan being reviewed, carried through the route so the flow state is
+  /// never guessed from a provider that can reset.
+  final String? scanId;
+
   @override
   ConsumerState<OcrReviewScreen> createState() => _OcrReviewScreenState();
 }
@@ -547,6 +552,23 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     _ctrl = TextEditingController(text: state.extractedText);
     _ctrl.addListener(
         () => ref.read(ocrReviewNotifierProvider.notifier).editText(_ctrl.text));
+
+    // Bind the current scan id into the review state so downstream steps use
+    // the real scan rather than guessing it.
+    final id = widget.scanId;
+    if (id != null && id.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final scan = await ref.read(scanByIdProvider(id).future);
+        if (scan == null || !mounted) return;
+        ref.read(ocrReviewNotifierProvider.notifier).setResult(
+              scanId: scan.id,
+              text: ref.read(ocrReviewNotifierProvider).extractedText,
+              confidence: 1.0,
+              imagePath: scan.pdfPath,
+              subject: scan.subject.isEmpty ? 'Maths' : scan.subject,
+            );
+      });
+    }
   }
 
   @override
@@ -560,6 +582,9 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     final state = ref.watch(ocrReviewNotifierProvider);
     final child = ref.watch(selectedChildNotifierProvider).valueOrNull;
     final confidencePct = (state.confidence * 100).toStringAsFixed(0);
+    final scan = widget.scanId == null
+        ? null
+        : ref.watch(scanByIdProvider(widget.scanId!)).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColours.background,
@@ -576,7 +601,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.go(AppRoutes.scan),
+                    onTap: () => context.canPop() ? context.pop() : context.go(AppRoutes.scan),
                     child: appSvg(_backIcon, size: 22, stroke: AppColours.blue, strokeWidth: 2),
                   ),
                   const SizedBox(width: 12),
@@ -634,11 +659,13 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('fractions-worksheet.jpg',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.ink)),
+                                Text(scan?.title ?? 'Scanned document',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColours.ink)),
                                 const SizedBox(height: 2),
-                                const Text('Scanned 11:42 · 218 words detected',
-                                    style: TextStyle(fontSize: 12, color: AppColours.muted)),
+                                Text('${scan?.pageCount ?? 0} page${(scan?.pageCount ?? 0) == 1 ? '' : 's'} · PDF',
+                                    style: const TextStyle(fontSize: 12, color: AppColours.muted)),
                                 const SizedBox(height: 10),
                                 Row(
                                   children: [
@@ -677,16 +704,6 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    if (state.confidence < 0.99)
-                      Row(
-                        children: const [
-                          Icon(Icons.warning_amber_rounded, color: AppColours.amber, size: 16),
-                          SizedBox(width: 6),
-                          Text('1 low-confidence word highlighted in amber',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.amber)),
-                        ],
-                      ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -740,7 +757,7 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                     flex: 2,
                     child: PrimaryButton(
                       label: 'Looks Good · Continue →',
-                      onPressed: () => context.go(AppRoutes.chooseOutput),
+                      onPressed: () => context.push('${AppRoutes.chooseOutput}?scanId=${widget.scanId ?? ''}'),
                     ),
                   ),
                 ],
