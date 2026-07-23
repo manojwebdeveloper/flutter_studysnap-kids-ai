@@ -6,7 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/app_database.dart';
 import '../network/api_client.dart';
 import '../../data/datasources/local/document_scanner_service.dart';
+import '../../data/datasources/local/extraction_service.dart';
 import '../../data/datasources/remote/claude_service.dart';
+import '../../data/datasources/remote/gemini_service.dart';
 import '../../data/repositories/repository_impls.dart';
 import '../../domain/entities/scan_entity.dart';
 import '../../domain/repositories/repositories.dart';
@@ -44,6 +46,14 @@ final localAuthProvider = Provider<LocalAuthentication>(
 
 final claudeServiceProvider = Provider<ClaudeService>(
   (ref) => ClaudeService(ref.watch(apiClientProvider)),
+);
+
+/// Google Gemini content generation (implements [GenerationRepository]).
+final geminiServiceProvider = Provider<GeminiService>((_) => GeminiService());
+
+/// On-device extraction (PDF → image → OCR text) for the review screen.
+final extractionServiceProvider = Provider<ExtractionService>(
+  (_) => const ExtractionService(),
 );
 
 /// Native document scanner (ML Kit / VisionKit → PDF).
@@ -112,6 +122,8 @@ final authRepositoryProvider = Provider<AuthRepository>(
   ),
 );
 
+/// Study-set generation now runs on Google Gemini. (The Claude implementation
+/// remains available via [claudeServiceProvider] but is no longer wired in.)
 final generationRepositoryProvider = Provider<GenerationRepository>(
-  (ref) => GenerationRepositoryImpl(ref.watch(claudeServiceProvider)),
+  (ref) => ref.watch(geminiServiceProvider),
 );

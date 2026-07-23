@@ -544,6 +544,9 @@ class OcrReviewScreen extends ConsumerStatefulWidget {
 
 class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
   late TextEditingController _ctrl;
+  bool _extracting = false;
+  bool _usedImage = false; // true when Gemini vision (not OCR) produced the text
+  bool _forceImage = false; // parent override: treat the page as picture-based
 
   @override
   void initState() {
@@ -553,22 +556,57 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
     _ctrl.addListener(
         () => ref.read(ocrReviewNotifierProvider.notifier).editText(_ctrl.text));
 
-    // Bind the current scan id into the review state so downstream steps use
-    // the real scan rather than guessing it.
-    final id = widget.scanId;
-    if (id != null && id.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final scan = await ref.read(scanByIdProvider(id).future);
-        if (scan == null || !mounted) return;
-        ref.read(ocrReviewNotifierProvider.notifier).setResult(
-              scanId: scan.id,
-              text: ref.read(ocrReviewNotifierProvider).extractedText,
-              confidence: 1.0,
-              imagePath: scan.pdfPath,
-              subject: scan.subject.isEmpty ? 'Maths' : scan.subject,
-            );
-      });
+    if ((widget.scanId ?? '').isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runExtraction());
     }
+  }
+
+  /// Extracts text from the scanned page: on-device OCR first (free, instant);
+  /// if the page has little text (a diagram/photo) or the parent forces image
+  /// mode, send the page image to Gemini vision instead. Fails soft.
+  Future<void> _runExtraction() async {
+    final id = widget.scanId;
+    if (id == null || id.isEmpty) return;
+    final scan = await ref.read(scanByIdProvider(id).future);
+    final pdf = scan?.pdfPath;
+    if (scan == null || pdf == null || !mounted) return;
+
+    final subject = scan.subject.isEmpty ? 'Maths' : scan.subject;
+    final yearGroup = ref.read(selectedChildNotifierProvider).valueOrNull?.yearGroup ?? 'Year 4';
+
+    setState(() => _extracting = true);
+    final ext = ref.read(extractionServiceProvider);
+
+    var text = '';
+    var usedImage = false;
+    final imagePath = await ext.renderFirstPage(pdf);
+    if (imagePath != null) {
+      final ocr = await ext.ocrImage(imagePath);
+      if (!_forceImage && ext.looksTextBased(ocr)) {
+        text = ocr; // healthy printed text — use it directly
+      } else {
+        // Diagram/photo (or forced): interpret with Gemini vision.
+        final vision = await ref
+            .read(geminiServiceProvider)
+            .describeImage(File(imagePath), subject: subject, yearGroup: yearGroup);
+        text = vision.dataOrNull ?? ocr;
+        usedImage = true;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _extracting = false;
+      _usedImage = usedImage;
+    });
+    _ctrl.text = text; // listener syncs this into the notifier
+    ref.read(ocrReviewNotifierProvider.notifier).setResult(
+          scanId: scan.id,
+          text: text,
+          confidence: usedImage ? 0.9 : 1.0,
+          imagePath: pdf,
+          subject: subject,
+        );
   }
 
   @override
@@ -681,29 +719,94 @@ class _OcrReviewScreenState extends ConsumerState<OcrReviewScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('EXTRACTED TEXT · TAP TO EDIT',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.muted, letterSpacing: 0.4)),
+                    Row(
+                      children: [
+                        const Text('EXTRACTED TEXT · TAP TO EDIT',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.muted, letterSpacing: 0.4)),
+                        const Spacer(),
+                        // Manual override: force Gemini vision for picture-based pages.
+                        GestureDetector(
+                          onTap: _extracting
+                              ? null
+                              : () {
+                                  setState(() => _forceImage = !_forceImage);
+                                  _runExtraction();
+                                },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_forceImage ? Icons.image : Icons.image_outlined,
+                                  size: 16, color: _forceImage ? AppColours.blue : AppColours.muted),
+                              const SizedBox(width: 4),
+                              Text('Picture page',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: _forceImage ? AppColours.blue : AppColours.muted)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColours.blue, width: 2),
-                        boxShadow: [
-                          BoxShadow(color: AppColours.blue.withOpacity(0.10), blurRadius: 0, spreadRadius: 4),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _ctrl,
-                        maxLines: null,
-                        style: const TextStyle(fontSize: 13, color: AppColours.ink2, height: 1.75),
-                        decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.all(16),
-                          border: InputBorder.none,
-                          filled: false,
+                    Stack(
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: AppColours.blue, width: 2),
+                            boxShadow: [
+                              BoxShadow(color: AppColours.blue.withOpacity(0.10), blurRadius: 0, spreadRadius: 4),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _ctrl,
+                            maxLines: null,
+                            minLines: 6,
+                            style: const TextStyle(fontSize: 13, color: AppColours.ink2, height: 1.75),
+                            decoration: const InputDecoration(
+                              contentPadding: EdgeInsets.all(16),
+                              border: InputBorder.none,
+                              filled: false,
+                              hintText: 'Extracted text will appear here. You can edit it.',
+                            ),
+                          ),
+                        ),
+                        if (_extracting)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColours.blue)),
+                                    SizedBox(height: 10),
+                                    Text('Reading your worksheet…',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.muted)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (_usedImage && !_extracting)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.auto_awesome, size: 14, color: AppColours.purple),
+                            SizedBox(width: 6),
+                            Text('Read using image understanding',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColours.purple)),
+                          ],
                         ),
                       ),
-                    ),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),

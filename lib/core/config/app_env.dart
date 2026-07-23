@@ -14,6 +14,14 @@ abstract class AppEnv {
   static String get claudeModel =>
       dotenv.env['CLAUDE_MODEL'] ?? 'claude-sonnet-4-6';
 
+  /// Google Gemini API key — obtain from https://aistudio.google.com and store
+  /// as GEMINI_API_KEY in .env. Never hardcode it.
+  static String get geminiApiKey =>
+      dotenv.env['GEMINI_API_KEY'] ?? '';
+
+  static String get geminiModel =>
+      dotenv.env['GEMINI_MODEL'] ?? 'gemini-1.5-flash';
+
   static String get appEnv =>
       dotenv.env['APP_ENV'] ?? 'development';
 

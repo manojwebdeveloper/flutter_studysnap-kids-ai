@@ -48,6 +48,12 @@ dependencies:
   # ── On-device OCR (privacy-first, no API cost) ───────────
   google_mlkit_text_recognition: ^0.13.0
 
+  # ── AI content generation (Google Gemini) ────────────────
+  google_generative_ai: ^0.4.6
+
+  # ── PDF page rasterisation (feeds OCR / Gemini vision) ────
+  pdfx: ^2.6.0
+
   # ── Image handling ────────────────────────────────────────
   image: ^4.2.0
   image_picker: ^1.1.2
