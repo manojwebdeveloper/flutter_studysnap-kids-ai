@@ -27,11 +27,14 @@ class _ParentPinScreenState extends ConsumerState<ParentPinScreen> {
 
   Future<void> _onDigit(String digit) async {
     final notifier = ref.read(parentPinNotifierProvider.notifier);
+    // Append the digit exactly once…
     notifier.tapDigit(digit);
 
-    final pin = ref.read(parentPinNotifierProvider).pin + digit; // peek at new value
+    // …then read the resulting PIN back from the notifier (do NOT append again).
+    final pin = ref.read(parentPinNotifierProvider).pin;
     if (pin.length == 4) {
-      await Future.delayed(const Duration(milliseconds: 250));
+      // Brief pause so the fourth dot is visibly filled before the step advances.
+      await Future.delayed(const Duration(milliseconds: 120));
       if (!ref.read(parentPinNotifierProvider).isConfirming) {
         _firstPin = pin;
       }
