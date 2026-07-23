@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/study_set_entity.dart';
 import '../../parent/providers/insights_provider.dart';
+import '../parent_guard.dart';
 import '../providers/kid_provider.dart';
 
 const _lockIcon =
@@ -127,6 +128,8 @@ class _LearningPathScreenState extends ConsumerState<LearningPathScreen> {
                         decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(999)),
                         child: Text('🔥 $streak', style: GoogleFonts.nunito(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.white)),
                       ),
+                      const SizedBox(width: 4),
+                      const KidLockButton(),
                     ],
                   ),
                   const SizedBox(height: 12),

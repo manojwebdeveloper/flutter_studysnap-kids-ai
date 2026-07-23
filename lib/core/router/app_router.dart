@@ -26,6 +26,7 @@ import '../../features/parent/screens/parent_progress_screen.dart';
 import '../../features/parent/screens/practice_areas_screen.dart';
 import '../../features/parent/screens/settings_screen.dart';
 import '../../features/parent/screens/subscription_screen.dart';
+import '../../features/kid/parent_guard.dart';
 import '../../features/kid/screens/kid_shell.dart';
 import '../../features/kid/screens/kid_dashboard_screen.dart';
 import '../../features/kid/screens/learning_path_screen.dart';
@@ -122,15 +123,16 @@ GoRouter appRouter(AppRouterRef ref) {
           GoRoute(path: AppRoutes.rewards,  builder: (_, __) => const RewardsScreen()),
         ],
       ),
-      // Kid screens outside shell
-      GoRoute(path: AppRoutes.learningPath, builder: (_, __) => const LearningPathScreen()),
-      GoRoute(path: AppRoutes.flashcards,   builder: (_, __) => const FlashcardStudyScreen()),
-      GoRoute(path: AppRoutes.quiz,         builder: (_, __) => const QuizScreen()),
-      GoRoute(path: AppRoutes.quizResult,   builder: (_, __) => const QuizResultScreen()),
-      GoRoute(path: AppRoutes.typeAnswer,   builder: (_, __) => const TypeAnswerScreen()),
-      GoRoute(path: AppRoutes.writingStudio,builder: (_, __) => const WritingStudioScreen()),
-      GoRoute(path: AppRoutes.phonicsListen,builder: (_, __) => const PhonicsListenScreen()),
-      GoRoute(path: AppRoutes.speakAloud,   builder: (_, __) => const SpeakAloudScreen()),
+      // Kid screens outside shell — wrapped in KidGuard so the hardware back
+      // button / swipe-back triggers the Parent PIN guard, not a silent exit.
+      GoRoute(path: AppRoutes.learningPath, builder: (_, __) => const KidGuard(child: LearningPathScreen())),
+      GoRoute(path: AppRoutes.flashcards,   builder: (_, __) => const KidGuard(child: FlashcardStudyScreen())),
+      GoRoute(path: AppRoutes.quiz,         builder: (_, __) => const KidGuard(child: QuizScreen())),
+      GoRoute(path: AppRoutes.quizResult,   builder: (_, __) => const KidGuard(child: QuizResultScreen())),
+      GoRoute(path: AppRoutes.typeAnswer,   builder: (_, __) => const KidGuard(child: TypeAnswerScreen())),
+      GoRoute(path: AppRoutes.writingStudio,builder: (_, __) => const KidGuard(child: WritingStudioScreen())),
+      GoRoute(path: AppRoutes.phonicsListen,builder: (_, __) => const KidGuard(child: PhonicsListenScreen())),
+      GoRoute(path: AppRoutes.speakAloud,   builder: (_, __) => const KidGuard(child: SpeakAloudScreen())),
     ],
 
     // Custom slide transition on every route

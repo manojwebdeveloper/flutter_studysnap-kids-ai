@@ -13,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/badge_entity.dart';
 import '../../parent/providers/insights_provider.dart';
+import '../parent_guard.dart';
 import '../providers/kid_provider.dart';
 
 const _lockIcon =
@@ -409,6 +410,8 @@ class RewardsScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Text('My Rewards',
                       style: GoogleFonts.nunito(fontSize: 24, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
+                  const Spacer(),
+                  const KidLockButton(light: true),
                 ],
               ),
             ),

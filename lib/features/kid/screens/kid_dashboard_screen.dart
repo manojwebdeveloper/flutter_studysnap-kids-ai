@@ -11,6 +11,7 @@ import '../../../shared/widgets/widgets.dart';
 import '../../../domain/entities/child_entity.dart';
 import '../../../domain/entities/study_set_entity.dart';
 import '../../parent/providers/insights_provider.dart';
+import '../parent_guard.dart';
 import '../providers/kid_provider.dart';
 
 const _greyscale = ColorFilter.matrix(<double>[
@@ -192,16 +193,8 @@ class _Body extends StatelessWidget {
                       );
                     }),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).maybePop(),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(11)),
-                      child: const Center(child: Icon(Icons.lock_outline, color: Colors.white, size: 18)),
-                    ),
-                  ),
+                  const SizedBox(width: 4),
+                  const KidLockButton(),
                 ],
               ),
               const SizedBox(height: 16),
