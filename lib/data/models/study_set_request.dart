@@ -12,7 +12,11 @@ part 'study_set_response.g.dart';
 @freezed
 class StudySetRequest with _$StudySetRequest {
   const factory StudySetRequest({
-    required String ocrText,
+    // Worksheet content — provide either (or both): extracted OCR text,
+    // and/or the path to a worksheet page image for providers that support
+    // vision input.
+    String? ocrText,
+    String? imagePath,
     required String subject,
     required String yearGroup,
     required String ageLevel,

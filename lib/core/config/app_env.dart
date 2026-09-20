@@ -22,6 +22,17 @@ abstract class AppEnv {
   static String get geminiModel =>
       dotenv.env['GEMINI_MODEL'] ?? 'gemini-1.5-flash';
 
+  /// OpenAI API key — obtain from https://platform.openai.com and store as
+  /// OPENAI_API_KEY in .env. Never hardcode it.
+  static String get openaiApiKey =>
+      dotenv.env['OPENAI_API_KEY'] ?? '';
+
+  static String get openaiModel =>
+      dotenv.env['OPENAI_MODEL'] ?? 'gpt-4o-mini';
+
+  static String get openaiBaseUrl =>
+      dotenv.env['OPENAI_BASE_URL'] ?? 'https://api.openai.com/v1';
+
   static String get appEnv =>
       dotenv.env['APP_ENV'] ?? 'development';
 
