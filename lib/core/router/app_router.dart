@@ -117,7 +117,10 @@ GoRouter appRouter(AppRouterRef ref) {
       GoRoute(path: AppRoutes.editQuiz,      builder: (_, __) => const EditQuizScreen()),
       GoRoute(path: AppRoutes.switchKid,     builder: (_, __) => const SwitchKidModeScreen()),
       GoRoute(path: AppRoutes.practiceQ,     builder: (_, __) => const PracticeQuestionsScreen()),
-      GoRoute(path: AppRoutes.curriculum,    builder: (_, __) => const CurriculumTopicScreen()),
+      GoRoute(
+        path: AppRoutes.curriculum,
+        builder: (_, state) => CurriculumTopicScreen(subject: state.uri.queryParameters['subject']),
+      ),
       GoRoute(path: AppRoutes.practiceAreas, builder: (_, __) => const PracticeAreasScreen()),
       GoRoute(path: AppRoutes.subscription,  builder: (_, __) => const SubscriptionScreen()),
 

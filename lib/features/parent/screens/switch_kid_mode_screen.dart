@@ -588,120 +588,106 @@ class _EmptyStudySets extends StatelessWidget {
 // sCT · CURRICULUM TOPIC
 // ═══════════════════════════════════════════════════════
 
-class CurriculumTopicScreen extends StatelessWidget {
-  const CurriculumTopicScreen({super.key});
+class CurriculumTopicScreen extends ConsumerWidget {
+  const CurriculumTopicScreen({super.key, this.subject});
+
+  /// The subject to show curriculum content for (e.g. 'Maths'). When null,
+  /// or when no study set matches it, the most recently updated real study
+  /// set is shown instead; if the child has none at all, a friendly empty
+  /// state is shown — never fabricated topic content.
+  final String? subject;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sets = ref.watch(studySetsStreamProvider).valueOrNull ?? const <StudySetEntity>[];
+    final matches = subject == null ? sets : sets.where((s) => s.subject == subject).toList();
+    matches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final set = matches.isEmpty ? null : matches.first;
+
     return Scaffold(
       backgroundColor: AppColours.background,
       body: SafeArea(
         child: Column(
           children: [
             _header(
-              'Fractions',
-              () => context.go(AppRoutes.studySets),
-              action: GestureDetector(
-                onTap: () {},
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: AppColours.blue, borderRadius: BorderRadius.circular(999)),
-                  child: const Text('+ Assign',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-                ),
-              ),
+              set?.title ?? subject ?? 'Curriculum',
+              () => context.canPop() ? context.pop() : context.go(AppRoutes.studySets),
             ),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                children: [
-                  Wrap(
-                    spacing: 7,
-                    runSpacing: 7,
-                    children: [
-                      Pill('Maths', bg: AppColours.blueLight, fg: AppColours.blue),
-                      Pill('Year 4', bg: AppColours.amberLight, fg: AppColours.amber),
-                      Pill('Age 8–10', bg: AppColours.tealLight, fg: AppColours.teal),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColours.line)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(children: [
-                          Text('💡', style: TextStyle(fontSize: 20)),
-                          SizedBox(width: 8),
-                          Text('Parent Explanation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
-                        ]),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'A fraction shows part of a whole. The bottom number is the denominator — how many equal parts the whole is split into. The top number is the numerator — how many of those parts you have.\n\nTwo fractions are equivalent when they show the same amount — for example, ½ = 2/4 = 4/8.',
-                          style: TextStyle(fontSize: 14, color: AppColours.ink2, height: 1.7),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColours.teal.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(10),
-                            border: const Border(left: BorderSide(color: AppColours.teal, width: 3)),
-                          ),
-                          child: const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('HOW TO EXPLAIN AT HOME',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppColours.teal, letterSpacing: 0.5)),
-                              SizedBox(height: 4),
-                              Text('Try cutting a pizza into equal pieces. Ask: "If I cut it into 4 pieces and you eat 2, what fraction did you eat?"',
-                                  style: TextStyle(fontSize: 13, color: AppColours.ink2, height: 1.6)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColours.line)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Topics Covered', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
-                        SizedBox(height: 10),
-                        _TopicRow('📝', 'What is a fraction?'),
-                        _TopicRow('🔢', 'Numerator & denominator'),
-                        _TopicRow('🔄', 'Equivalent fractions', isLast: true),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              child: set == null
+                  ? const EmptyState(
+                      emoji: '📚',
+                      title: 'No curriculum content yet',
+                      message: 'Scan a worksheet and generate a study set to see its topics here.',
+                    )
+                  : _CurriculumBody(set: set),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: Row(
-                children: [
-                  Expanded(child: PrimaryButton(label: '🃏 Study Now', onPressed: () => context.go(AppRoutes.flashcards))),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => context.go(AppRoutes.chooseOutput),
-                      child: Container(
-                        height: 54,
-                        decoration: BoxDecoration(color: AppColours.subtle, borderRadius: BorderRadius.circular(16)),
-                        child: const Center(child: Text('✨ Generate', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColours.ink2))),
+            if (set != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Row(
+                  children: [
+                    Expanded(child: PrimaryButton(label: '🃏 Study Now', onPressed: () => context.go(AppRoutes.flashcards))),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => context.push(AppRoutes.chooseOutput),
+                        child: Container(
+                          height: 54,
+                          decoration: BoxDecoration(color: AppColours.subtle, borderRadius: BorderRadius.circular(16)),
+                          child: const Center(child: Text('✨ Generate', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColours.ink2))),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CurriculumBody extends ConsumerWidget {
+  const _CurriculumBody({required this.set});
+  final StudySetEntity set;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cards = ref.watch(flashcardsBySetProvider(set.id)).valueOrNull ?? const [];
+    final topics = cards.take(6).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      children: [
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            Pill(set.subject, bg: AppColours.blueLight, fg: AppColours.blue),
+            Pill(set.yearGroup, bg: AppColours.amberLight, fg: AppColours.amber),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColours.line)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Topics Covered', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.ink)),
+              const SizedBox(height: 10),
+              if (topics.isEmpty)
+                const Text('No flashcards in this study set yet.', style: TextStyle(fontSize: 13, color: AppColours.muted))
+              else
+                ...topics.asMap().entries.map(
+                      (e) => _TopicRow('📝', e.value.question, isLast: e.key == topics.length - 1),
+                    ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1014,9 +1000,10 @@ class PracticeAreasScreen extends ConsumerWidget {
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                _ActionBtn('✨ Create Set', () => context.go(AppRoutes.chooseOutput)),
+                                _ActionBtn('✨ Create Set', () => context.push(AppRoutes.chooseOutput)),
                                 const SizedBox(width: 8),
-                                _ActionBtn('📚 Curriculum', () => context.go(AppRoutes.curriculum)),
+                                _ActionBtn('📚 Curriculum',
+                                    () => context.push('${AppRoutes.curriculum}?subject=${Uri.encodeComponent(e.key)}')),
                               ],
                             ),
                           ],

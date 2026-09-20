@@ -35,6 +35,37 @@ Future<List<StudySetEntity>> approvedSets(ApprovedSetsRef ref) async {
   return result.dataOrNull ?? [];
 }
 
+/// A real flashcard paired with the subject/title of the study set it came
+/// from — used by the free-standing (not tied to a specific set) practice
+/// activities such as "Spell It".
+typedef PracticeCard = ({FlashcardEntity card, String subject, String studySetTitle});
+
+/// All real flashcards across every approved study set for the active
+/// child, flattened for use by practice activities that aren't launched
+/// against a specific study set. Empty when the child has no real content
+/// yet — callers should show a friendly empty state rather than sample data.
+@riverpod
+Future<List<PracticeCard>> practiceFlashcards(PracticeFlashcardsRef ref) async {
+  final sets = await ref.watch(approvedSetsProvider.future);
+  final dao = ref.watch(flashcardsDaoProvider);
+  final result = <PracticeCard>[];
+  for (final s in sets) {
+    final rows = await dao.getBySet(s.id);
+    for (final r in rows) {
+      result.add((
+        card: FlashcardEntity(
+          id: r.id, studySetId: r.studySetId,
+          question: r.question, answer: r.answer,
+          difficulty: r.difficulty, orderIndex: r.orderIndex,
+        ),
+        subject: s.subject,
+        studySetTitle: s.title,
+      ));
+    }
+  }
+  return result;
+}
+
 // ═══════════════════════════════════════════════════════
 // FLASHCARD SESSION STATE
 // ═══════════════════════════════════════════════════════

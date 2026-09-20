@@ -14,13 +14,6 @@ import '../../parent/providers/insights_provider.dart';
 import '../parent_guard.dart';
 import '../providers/kid_provider.dart';
 
-const _greyscale = ColorFilter.matrix(<double>[
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0.2126, 0.7152, 0.0722, 0, 0,
-  0, 0, 0, 1, 0,
-]);
-
 class KidDashboardScreen extends ConsumerWidget {
   const KidDashboardScreen({super.key});
 
@@ -30,11 +23,24 @@ class KidDashboardScreen extends ConsumerWidget {
     final sets = ref.watch(approvedSetsProvider).valueOrNull ?? const <StudySetEntity>[];
     final badges = ref.watch(kidBadgesProvider).valueOrNull ?? const [];
     final badgeCount = badges.where((b) => b.isEarned).length;
+    final progress = ref.watch(childProgressProvider).valueOrNull;
+    final completedSetIds = <String>{
+      if (progress != null) for (final s in progress.sessions) s.studySetId,
+    };
+    final subjectCounts = <String, (int done, int total)>{};
+    for (final s in sets) {
+      final prev = subjectCounts[s.subject] ?? (0, 0);
+      subjectCounts[s.subject] = (
+        prev.$1 + (completedSetIds.contains(s.id) ? 1 : 0),
+        prev.$2 + 1,
+      );
+    }
     final content = childAsync.when(
       data: (child) => _Body(
         child: child,
         continueSet: sets.isEmpty ? null : sets.first,
         badgeCount: badgeCount,
+        subjectCounts: subjectCounts,
       ),
       loading: () => const Center(child: CircularProgressIndicator(color: AppColours.kidBlue)),
       error: (_, __) => const Center(child: Text('Something went wrong')),
@@ -129,10 +135,11 @@ class _KidSidebar extends StatelessWidget {
 }
 
 class _Body extends StatelessWidget {
-  const _Body({required this.child, this.continueSet, this.badgeCount = 0});
+  const _Body({required this.child, this.continueSet, this.badgeCount = 0, this.subjectCounts = const {}});
   final ChildEntity? child;
   final StudySetEntity? continueSet;
   final int badgeCount;
+  final Map<String, (int done, int total)> subjectCounts;
 
   @override
   Widget build(BuildContext context) {
@@ -181,19 +188,7 @@ class _Body extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Row(
-                    children: List.generate(5, (i) {
-                      final active = i < 2;
-                      final heart = const Text('❤️', style: TextStyle(fontSize: 20));
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 3),
-                        child: active
-                            ? heart
-                            : Opacity(opacity: 0.3, child: ColorFiltered(colorFilter: _greyscale, child: heart)),
-                      );
-                    }),
-                  ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   const KidLockButton(),
                 ],
               ),
@@ -311,7 +306,14 @@ class _Body extends StatelessWidget {
                         style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w900, color: AppColours.kidMuted, letterSpacing: 0.8)),
                     const SizedBox(height: 9),
                     for (final s in subjects) ...[
-                      _subject(_subjectEmoji(s), s, _subjectColour(s), 0, 0, context),
+                      _subject(
+                        _subjectEmoji(s),
+                        s,
+                        _subjectColour(s),
+                        subjectCounts[s]?.$1 ?? 0,
+                        subjectCounts[s]?.$2 ?? 0,
+                        context,
+                      ),
                       const SizedBox(height: 10),
                     ],
                   ],

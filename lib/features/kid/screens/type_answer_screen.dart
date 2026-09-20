@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../providers/kid_provider.dart';
 
-const _target = 'ISLAND';
 const _kbBg = Color(0xFFDDE3EC);
 const _keyShadow = Color(0xFFB6BFCC);
 
@@ -17,16 +19,25 @@ const _greyscale = ColorFilter.matrix(<double>[
   0, 0, 0, 1, 0,
 ]);
 
-class TypeAnswerScreen extends StatefulWidget {
+/// Words suitable for the letter-box spelling UI: a single alphabetic token,
+/// short enough to fit on screen.
+final _wordPattern = RegExp(r'^[A-Za-z]{2,12}$');
+
+/// "Spell It" — a real spelling practice game built from the child's actual
+/// flashcards (word = answer, clue = question). Shows a friendly empty state
+/// when there's no real content to practise with yet.
+class TypeAnswerScreen extends ConsumerStatefulWidget {
   const TypeAnswerScreen({super.key});
   @override
-  State<TypeAnswerScreen> createState() => _TypeAnswerScreenState();
+  ConsumerState<TypeAnswerScreen> createState() => _TypeAnswerScreenState();
 }
 
-class _TypeAnswerScreenState extends State<TypeAnswerScreen>
+class _TypeAnswerScreenState extends ConsumerState<TypeAnswerScreen>
     with SingleTickerProviderStateMixin {
   String _typed = '';
   bool? _correct;
+  int _index = 0;
+  int _wrongAttempts = 0;
   late AnimationController _cursor;
 
   static const _rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
@@ -43,8 +54,11 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
     super.dispose();
   }
 
-  void _tapKey(String letter) {
-    if (_typed.length >= _target.length) return;
+  List<PracticeCard> _qualifying(List<PracticeCard> all) =>
+      all.where((c) => _wordPattern.hasMatch(c.card.answer.trim())).toList();
+
+  void _tapKey(String letter, int targetLength) {
+    if (_typed.length >= targetLength) return;
     HapticFeedback.lightImpact();
     setState(() {
       _typed += letter;
@@ -61,45 +75,98 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
     });
   }
 
-  void _check() {
+  void _check(String target, int total) {
     HapticFeedback.mediumImpact();
-    final ok = _typed == _target;
-    setState(() => _correct = ok);
+    final ok = _typed == target;
+    setState(() {
+      _correct = ok;
+      if (!ok) _wrongAttempts++;
+    });
     if (ok) {
       Future.delayed(const Duration(milliseconds: 700), () {
-        if (mounted) context.go(AppRoutes.learningPath);
+        if (!mounted) return;
+        if (_index + 1 >= total) {
+          context.go(AppRoutes.learningPath);
+        } else {
+          setState(() {
+            _index++;
+            _typed = '';
+            _correct = null;
+          });
+        }
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cardsAsync = ref.watch(practiceFlashcardsProvider);
+    final words = _qualifying(cardsAsync.valueOrNull ?? const <PracticeCard>[]);
+
+    if (cardsAsync.isLoading && words.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColours.kidBackground,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _header('SPELLING'),
+              const Expanded(child: Center(child: CircularProgressIndicator(color: AppColours.kidBlue))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (words.isEmpty) {
+      return Scaffold(
+        backgroundColor: AppColours.kidBackground,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _header('SPELLING'),
+              const Expanded(
+                child: KidEmptyState(
+                  emoji: '✏️',
+                  title: 'No words to spell yet',
+                  message: 'Ask a grown-up to scan a worksheet — spelling words will appear here!',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final current = words[_index.clamp(0, words.length - 1)];
+    final target = current.card.answer.trim().toUpperCase();
+    final livesLeft = (5 - _wrongAttempts).clamp(0, 5);
+
     return Scaffold(
       backgroundColor: AppColours.kidBackground,
       body: SafeArea(
         child: Column(
           children: [
-            _header(context),
+            _header(current.subject.toUpperCase(), livesLeft: livesLeft),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: _progressBar(0.4),
+              child: _progressBar((_index + 1) / words.length),
             ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                 child: Column(
                   children: [
-                    _promptCard(),
+                    _promptCard(current.card.question, _index, words.length),
                     const SizedBox(height: 16),
-                    _letterBoxes(),
+                    _letterBoxes(target),
                     const SizedBox(height: 12),
-                    _hintChip(),
+                    _hintChip(target),
                     const Spacer(),
                   ],
                 ),
               ),
             ),
-            _keyboard(),
+            _keyboard(target, words.length),
           ],
         ),
       ),
@@ -107,7 +174,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
   }
 
   // ── Header ─────────────────────────────────────────────
-  Widget _header(BuildContext context) => Padding(
+  Widget _header(String subtitle, {int livesLeft = 5}) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 20, 6),
         child: Row(
           children: [
@@ -129,7 +196,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('SPELLING · SILENT LETTERS',
+                  Text(subtitle,
                       style: GoogleFonts.nunito(fontSize: 11, fontWeight: FontWeight.w800, color: AppColours.kidMuted, letterSpacing: 0.4)),
                   Text('Spell It', style: GoogleFonts.nunito(fontSize: 17, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
                 ],
@@ -140,7 +207,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
                 const heart = Text('❤️', style: TextStyle(fontSize: 18));
                 return Padding(
                   padding: const EdgeInsets.only(left: 2),
-                  child: i < 3 ? heart : const Opacity(opacity: 0.35, child: ColorFiltered(colorFilter: _greyscale, child: heart)),
+                  child: i < livesLeft ? heart : const Opacity(opacity: 0.35, child: ColorFiltered(colorFilter: _greyscale, child: heart)),
                 );
               }),
             ),
@@ -159,7 +226,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: value,
+            widthFactor: value.clamp(0.0, 1.0),
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(colors: [AppColours.kidYellow, AppColours.kidGreen]),
@@ -170,7 +237,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
       );
 
   // ── Prompt card ────────────────────────────────────────
-  Widget _promptCard() => Container(
+  Widget _promptCard(String clue, int index, int total) => Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -182,53 +249,23 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                _pill('QUESTION 4 OF 10', AppColours.kidYellow, const Color(0xFF78350F)),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => HapticFeedback.selectionClick(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColours.kidBlue.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: AppColours.kidBlue.withOpacity(0.44), width: 2),
-                    ),
-                    child: Row(
-                      children: [
-                        const Text('🔊', style: TextStyle(fontSize: 13)),
-                        const SizedBox(width: 5),
-                        Text('Hear it',
-                            style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w900, color: AppColours.kidBlueDark)),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            _pill('WORD ${index + 1} OF $total', AppColours.kidYellow, const Color(0xFF78350F)),
             const SizedBox(height: 14),
             Text('Type the word that means:',
                 style: GoogleFonts.nunito(fontSize: 19, fontWeight: FontWeight.w900, color: AppColours.kidInk)),
             const SizedBox(height: 8),
-            RichText(
-              text: TextSpan(
-                style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.kidMuted, height: 1.5),
-                children: [
-                  const TextSpan(text: 'A piece of land with water all around it. The '),
-                  TextSpan(text: 's', style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w900, color: AppColours.kidPink)),
-                  const TextSpan(text: ' is silent!'),
-                ],
-              ),
+            Text(
+              clue,
+              style: GoogleFonts.nunito(fontSize: 15, fontWeight: FontWeight.w700, color: AppColours.kidMuted, height: 1.5),
             ),
           ],
         ),
       );
 
   // ── Letter boxes ───────────────────────────────────────
-  Widget _letterBoxes() => Row(
+  Widget _letterBoxes(String target) => Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_target.length, (i) {
+        children: List.generate(target.length, (i) {
           final filled = i < _typed.length;
           final isCurrent = i == _typed.length;
           return Padding(
@@ -271,7 +308,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
       );
 
   // ── Hint chip ──────────────────────────────────────────
-  Widget _hintChip() => Center(
+  Widget _hintChip(String target) => Center(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(color: AppColours.kidPurple.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
@@ -281,7 +318,9 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
               const Text('💡', style: TextStyle(fontSize: 13)),
               const SizedBox(width: 6),
               Text(
-                _correct == false ? 'Not quite — try again!' : 'Starts with I and ends with D',
+                _correct == false
+                    ? 'Not quite — try again!'
+                    : 'Starts with ${target[0]} and ends with ${target[target.length - 1]}',
                 style: GoogleFonts.nunito(fontSize: 12, fontWeight: FontWeight.w800, color: AppColours.kidPurpleDark),
               ),
             ],
@@ -289,8 +328,8 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
         ),
       );
 
-  // ── Mock keyboard ──────────────────────────────────────
-  Widget _keyboard() => Container(
+  // ── Keyboard ───────────────────────────────────────────
+  Widget _keyboard(String target, int total) => Container(
         padding: const EdgeInsets.fromLTRB(6, 8, 6, 10),
         decoration: const BoxDecoration(
           color: _kbBg,
@@ -303,7 +342,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (r == 2) _wideKey(child: const Icon(Icons.keyboard_arrow_up, size: 20, color: AppColours.kidInk), onTap: () {}),
-                  ..._rows[r].split('').map((c) => _letterKey(c)),
+                  ..._rows[r].split('').map((c) => _letterKey(c, target.length)),
                   if (r == 2) _wideKey(child: const Icon(Icons.backspace_outlined, size: 18, color: AppColours.kidInk), onTap: _backspace),
                 ],
               ),
@@ -314,7 +353,7 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
                 _keyBase(width: 200, child: Text('space', style: GoogleFonts.nunito(fontSize: 13, fontWeight: FontWeight.w700, color: AppColours.kidMuted)), onTap: () {}),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _check,
+                  onTap: () => _check(target, total),
                   child: Container(
                     width: 80,
                     height: 40,
@@ -335,10 +374,10 @@ class _TypeAnswerScreenState extends State<TypeAnswerScreen>
         ),
       );
 
-  Widget _letterKey(String c) => _keyBase(
+  Widget _letterKey(String c, int targetLength) => _keyBase(
         minWidth: 30,
         child: Text(c, style: GoogleFonts.nunito(fontSize: 16, fontWeight: FontWeight.w800, color: AppColours.kidInk)),
-        onTap: () => _tapKey(c),
+        onTap: () => _tapKey(c, targetLength),
       );
 
   Widget _wideKey({required Widget child, required VoidCallback onTap}) =>
